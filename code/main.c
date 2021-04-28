@@ -30,15 +30,30 @@ void getInput(char *buffer)
 int main()
 {   
     // TODO: Serialization
-    Object coin = {{"coin", "silver coin"}, "a silver coin", "It is a coin made out of silver.", 0, 0, 1, NULL, NULL, NULL };
-    Object guard = {{"guard", "city guard"}, "a city guard", "This guard makes the city secure.", 100, 20, 1, NULL, NULL, NULL };
+    Object purse = {{"purse", "coin purse"},
+                    "a coin purse",
+                    "It is a purse for holding coins.",
+                    1, 5, 1,
+                    NULL, NULL, NULL };
+    Object coin = {{"coin", "silver coin"},
+                    "a silver coin",
+                    "It is a coin made out of silver.",
+                    0, 0, 1,
+                    NULL, NULL, NULL };
+    Object guard = {{"guard", "city guard"},
+                    "a city guard",
+                    "This guard makes the city secure.",
+                    100, 20, 1,
+                    NULL, NULL, NULL };
     objectHead.inventoryHead = &player;
-    player.next = &coin;
-    coin.next = &guard;
+    player.inventoryHead = &purse;
+    purse.inventoryHead = &coin;
+    player.next = &guard;
 
     char buffer[INPUT_SIZE];
     printf("Type \"help\" for the list of commands.\n");
     while(getInput(buffer), parseInput(buffer));
+    
     printf("Press enter to continue...\n");
     getc(stdin);
     return 0;

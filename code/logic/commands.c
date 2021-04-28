@@ -99,17 +99,17 @@ int executeHelp(Object *args[])
     // NOTE: This is temporary.
     Command commands[] = 
     {
-        { "quit"        , executeQuit       },
-        { "go A"        , executeTravel     },
-        { "go to A"     , executeTravel     },
-        { "enter A"     , executeTravel     },
-        { "look around" , executeLookAround },
-        { "look at A"   , executeLookAt     },
-        { "examine A"   , executeLookAt     },
-        { "pick up A"   , executePickUp     },
-        { "get A"       , executePickUp     },
-        { "drop A"      , executeDrop       },
-        { "help"        , executeHelp       }
+        { "quit"        , 0, 0, executeQuit       },
+        { "go A"        , 0, 0, executeTravel     },
+        { "go to A"     , 0, 0, executeTravel     },
+        { "enter A"     , 0, 0, executeTravel     },
+        { "look around" , 0, 0, executeLookAround },
+        { "look at A"   , 0, 0, executeLookAt     },
+        { "examine A"   , 0, 0, executeLookAt     },
+        { "pick up A"   , 0, 0, executePickUp     },
+        { "get A"       , 0, 0, executePickUp     },
+        { "drop A"      , 0, 0, executeDrop       },
+        { "help"        , 0, 0, executeHelp       }
     };
     size_t length = sizeof(commands)/sizeof(Command);
     for(size_t i=0; i<length; i++)

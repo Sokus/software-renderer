@@ -25,6 +25,5 @@ struct Object
 };
 
 Object *findParent(Object *root, Object *obj);
-int contains(Object *container, Object *obj);
 
 #endif

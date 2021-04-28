@@ -20,15 +20,3 @@ Object *findParent(Object *root, Object *obj)
 
     return NULL;
 }
-
-int contains(Object *container, Object *obj)
-{
-    for(Object *inv=container->inventoryHead; inv != NULL; inv = inv->next)
-    {
-        if(inv == obj || contains(inv, obj))
-        {
-            return 1;
-        }
-    }
-    return 0;
-}

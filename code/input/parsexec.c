@@ -26,12 +26,13 @@ static int compareWithTag(char *src, char *tag)
     return 1;
 }
 
-static Object *findByTag(Object *root, char *input, int *minTagLength)
+static Object *findByTag(Object *root, char *input, int *minTagLength, Distance minDistance, Distance maxDistance)
 {
     Object *match = NULL;
     for(Object *o=root; o != NULL; o=o->next)
     {
-        if(o != &player)
+        Distance dist = getDistance(&player, o);
+        if(minDistance <= dist && dist <= maxDistance)
         {
             for(int i=0; i<8; i++)
             {
@@ -44,7 +45,7 @@ static Object *findByTag(Object *root, char *input, int *minTagLength)
             }
         }
 
-        Object *containedMatch = findByTag(o->inventoryHead, input, minTagLength);
+        Object *containedMatch = findByTag(o->inventoryHead, input, minTagLength, minDistance, maxDistance);
         if(containedMatch != NULL)
         {
             match = containedMatch;
@@ -53,9 +54,10 @@ static Object *findByTag(Object *root, char *input, int *minTagLength)
     return match;
 }
 
-static int matchCommand(char *input, char *pattern)
+static int matchCommand(char *input, Command *cmd)
 {
     clearArgs();
+    char *pattern = cmd->pattern;
     Object *match = NULL;
     while(*pattern != '\0')
     {
@@ -65,7 +67,7 @@ static int matchCommand(char *input, char *pattern)
         if(isCapital(*pattern))
         {
             int minTagLength = 0;
-            match = findByTag(&objectHead, input, &minTagLength);
+            match = findByTag(&objectHead, input, &minTagLength, cmd->minDistance, cmd->maxDistance);
 
             if(match != NULL)
             {
@@ -104,24 +106,24 @@ int parseInput(char *input)
 {
     Command commands[] = 
     {
-        { "quit"        , executeQuit       },
-        { "go A"        , executeTravel     },
-        { "go to A"     , executeTravel     },
-        { "enter A"     , executeTravel     },
-        { "look around" , executeLookAround },
-        { "look at A"   , executeLookAt     },
-        { "examine A"   , executeLookAt     },
-        { "pick up A"   , executePickUp     },
-        { "get A"       , executePickUp     },
-        { "drop A"      , executeDrop       },
-        { "help"        , executeHelp       }
+        { "quit"        , 0, 0, executeQuit },
+        { "go A"        , NEAR, NEAR, executeTravel },
+        { "go to A"     , NEAR, NEAR, executeTravel },
+        { "enter A"     , NEAR, NEAR, executeTravel },
+        { "look around" , 0, 0, executeLookAround },
+        { "look at A"   , INVENTORY, NEAR_CONTAINED, executeLookAt },
+        { "examine A"   , INVENTORY, NEAR_CONTAINED, executeLookAt },
+        { "pick up A"   , NEAR, NEAR_CONTAINED, executePickUp },
+        { "get A"       , NEAR, NEAR_CONTAINED, executePickUp },
+        { "drop A"      , INVENTORY, INVENTORY_CONTAINED, executeDrop },
+        { "help"        , 0, 0, executeHelp }
     };
 
     size_t commandsLength = sizeof(commands)/sizeof(Command);
     Command *cmd = NULL;
     for(size_t i=0; i<commandsLength; i++)
     {
-        if(matchCommand(input, commands[i].pattern))
+        if(matchCommand(input, &commands[i]))
         {
             cmd = &commands[i];
             break;

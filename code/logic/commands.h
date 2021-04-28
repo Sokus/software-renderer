@@ -4,7 +4,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "../logic/interact.h"
+#include "distance.h"
+#include "interact.h"
 #include "../objects/object.h"
 #include "../utility/strops.h"
 
@@ -14,6 +15,8 @@ extern Object player;
 typedef struct
 {
     char *pattern;
+    Distance minDistance;
+    Distance maxDistance;
     int (*function)(Object *args[]);
 } Command;
 

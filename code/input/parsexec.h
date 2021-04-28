@@ -14,8 +14,8 @@ static Object *args[26];
 
 static void clearArgs();
 static int compareWithTag(char *src, char *tag);
-static Object *findByTag(Object *root, char *input, int *minTagLength);
-static int matchCommand(char *input, char *pattern);
+static Object *findByTag(Object *root, char *input, int *minTagLength, Distance minDistance, Distance maxDistance);
+static int matchCommand(char *input, Command *cmd);
 
 extern int parseInput(char *input);
 
