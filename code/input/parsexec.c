@@ -8,39 +8,6 @@ static void clearArgs()
     }
 }
 
-static int getLength(char *src)
-{
-    int length = 0;
-    while(*src != '\0')
-    {
-        length++;
-        src++;
-    }
-    return length;
-}
-
-static char *skipSpaces(char *src)
-{
-    while(*src == ' ')
-    {
-        src++;
-    }
-    return src;
-}
-
-static int isCapital(char letter)
-{
-    return letter >= 'A' && letter <= 'Z';
-}
-
-static int compareInsensitive(char a, char b)
-{
-    // ASCII:  A(65) - a(97) = 32
-    return  a == b    ? 1 :
-            a+32 == b ? 1 :
-            a == b+32 ? 1 : 0;
-}
-
 static int compareWithTag(char *src, char *tag)
 {
     while(*tag != '\0')
@@ -59,7 +26,34 @@ static int compareWithTag(char *src, char *tag)
     return 1;
 }
 
-static int matchCommand(char *input, char *pattern, Object objectHead)
+static Object *findByTag(Object *root, char *input, int *minTagLength)
+{
+    Object *match = NULL;
+    for(Object *o=root; o != NULL; o=o->next)
+    {
+        if(o != &player)
+        {
+            for(int i=0; i<8; i++)
+            {
+                if(o->tags[i] == NULL) continue;
+                int tagLength = getLength((o->tags)[i]);
+                if( tagLength <= *minTagLength
+                    || !compareWithTag(input, o->tags[i])) continue;
+                *minTagLength = tagLength;
+                match = o;
+            }
+        }
+
+        Object *containedMatch = findByTag(o->inventoryHead, input, minTagLength);
+        if(containedMatch != NULL)
+        {
+            match = containedMatch;
+        }
+    }
+    return match;
+}
+
+static int matchCommand(char *input, char *pattern)
 {
     clearArgs();
     Object *match = NULL;
@@ -70,19 +64,8 @@ static int matchCommand(char *input, char *pattern, Object objectHead)
 
         if(isCapital(*pattern))
         {
-            int maxTagLength = 0;
-            for(Object *o=objectHead.next; o != NULL; o=o->next)
-            {
-                for(int i=0; i<8; i++)
-                {
-                    if(o->tags[i] == NULL) continue;
-                    int tagLength = getLength((o->tags)[i]);
-                    if( tagLength <= maxTagLength
-                        || !compareWithTag(input, o->tags[i])) continue;
-                    maxTagLength = tagLength;
-                    match = o;
-                }
-            }
+            int minTagLength = 0;
+            match = findByTag(&objectHead, input, &minTagLength);
 
             if(match != NULL)
             {
@@ -95,7 +78,7 @@ static int matchCommand(char *input, char *pattern, Object objectHead)
                 
                 // skip the name of matching object in the input string
                 // to continue the comparison
-                for(int i=0; *(input+1) != '\0' && i<maxTagLength-1; i++)
+                for(int i=0; *(input+1) != '\0' && i<minTagLength-1; i++)
                 {
                     input++;
                 }
@@ -117,23 +100,28 @@ static int matchCommand(char *input, char *pattern, Object objectHead)
     return 1;
 }
 
-int parseInput(char *input, Object objectHead)
+int parseInput(char *input)
 {
     Command commands[] = 
     {
-        { "quit"        , executeQuit },
-        { "go A"        , executeTravel },
-        { "go to A"     , executeTravel },
-        { "enter A"     , executeTravel },
+        { "quit"        , executeQuit       },
+        { "go A"        , executeTravel     },
+        { "go to A"     , executeTravel     },
+        { "enter A"     , executeTravel     },
         { "look around" , executeLookAround },
-        { "look at A"   , executeLookAt },
-        { "examine A"   , executeLookAt }
+        { "look at A"   , executeLookAt     },
+        { "examine A"   , executeLookAt     },
+        { "pick up A"   , executePickUp     },
+        { "get A"       , executePickUp     },
+        { "drop A"      , executeDrop       },
+        { "help"        , executeHelp       }
     };
+
     size_t commandsLength = sizeof(commands)/sizeof(Command);
     Command *cmd = NULL;
     for(size_t i=0; i<commandsLength; i++)
     {
-        if(matchCommand(input, commands[i].pattern, objectHead))
+        if(matchCommand(input, commands[i].pattern))
         {
             cmd = &commands[i];
             break;
