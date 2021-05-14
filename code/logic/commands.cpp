@@ -1,8 +1,15 @@
-#include "commands.h"
+#include "commands.hpp"
+
+Command::Command(std::string pattern,
+            Distance minDistance, Distance maxDistance,
+            int (*function)(Object **))
+    : pattern(pattern),
+    minDistance(minDistance), maxDistance(maxDistance),
+    function(function) { }
 
 int executeQuit(Object *args[])
 {
-    printf("Goodbye.\n");
+    std::cout << "Goodbye." << std::endl;
     return 0;
 }
 
@@ -13,42 +20,45 @@ int executeTravel(Object *args[])
     {
         if(objA->destination != NULL)
         {
-            doTravel(&player, objA);
+            //doTravel(&player, objA);
+            std::cout << "Traveled " << objA->description << "." << std::endl;
         }
         else
         {
-            char *temporaryDescription = copy(objA->description);
-            capitalise(temporaryDescription);
-            printf("%s can't be traveled.\n", temporaryDescription);
-            free(temporaryDescription);
+            std::string desc = capitalise(objA->description);
+            std::cout << desc << " can't be traveled." << std::endl;
         }
     }
     return 1;
 }
 
 int executeLookAround(Object *args[])
-{
-    Object *parent = findParent(&objectHead, &player);
-    if(parent != NULL)
+{   
+    std::cout << "Looking around." << std::endl;
+    std::cout << player.parent->details << std::endl;
+    std::cout << "You can see:" << std::endl;
+    for(Object *o=player.parent->inventoryHead; o!=NULL; o=o->next)
     {
-        printf("%s\nYou can see:\n", parent->details);
-        for(Object *o=parent->inventoryHead; o!=NULL; o=o->next)
-        {
-            if(o == &player) continue;
-            printf("%s,\n", o->description);
-        }
-    }
+        if(o == &player) continue;
+        std::cout << o->description << std::endl;
+    }   
     return 1;
 }
 
 int executeLookAt(Object *args[])
 {
-    printf("%s\n", args[0]->details);
+    Object* objA = args[0];
+    if(objA != nullptr)
+    {
+        std::cout << objA->description << std::endl;
+    }
     return 1;
 }
 
 int executePickUp(Object *args[])
 {
+    std::cout << "Picked up ..." << std::endl;
+    /*
     Object *objA = args[0];
     if(objA != NULL)
     {
@@ -67,18 +77,23 @@ int executePickUp(Object *args[])
             free(temporaryDescription);
         }
     }
+    */
     return 1;
 }
 
 int executeDrop(Object *args[])
 {
+    std::cout << "Dropped ..." << std::endl;
+    /*
     Object *objA = args[0];
     if(objA != NULL)
     {
+        Object *parent = player.parent;
+
         // TODO: Calculate available capacity
         // NOTE: This condition is temporary
         // just for testing command system
-        if(findParent(&objectHead, &player)->capacity >= objA->weight)
+        if(parent != NULL && parent->capacity >= objA->weight)
         {
             doDrop(&player, objA);
         }
@@ -90,13 +105,16 @@ int executeDrop(Object *args[])
             free(temporaryDescription);
         }
     }
+    */
     return 1;
 }
 
 int executeHelp(Object *args[])
 {
+    std::cout << "Executing help." << std::endl;
     // TODO: Move commands array from "prasexec.c" somewhere visible
     // NOTE: This is temporary.
+    /*
     Command commands[] = 
     {
         { "quit"        , 0, 0, executeQuit       },
@@ -116,5 +134,7 @@ int executeHelp(Object *args[])
     {
         printf("%s\n", commands[i].pattern);
     }
+    */
+   return 1;
 }
 
