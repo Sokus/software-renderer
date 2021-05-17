@@ -1,14 +1,14 @@
 #include "parsexec.hpp"
 
-static void clearArgs()
+static void ClearArgs()
 {
     for(int i=0; i<26; i++)
     {
-        args[i] = nullptr;
+        gArgs[i] = nullptr;
     }
 }
 
-static bool compareWithTag(const std::string& src, const std::string& tag)
+static bool CompareWithTag(const std::string& src, const std::string& tag)
 {
     std::string::const_iterator src_it = src.begin();
     std::string::const_iterator tag_it = tag.begin();
@@ -30,7 +30,7 @@ static bool compareWithTag(const std::string& src, const std::string& tag)
     return true;
 }
 
-static bool matchObjectTag(const std::string& src, const Object& obj,
+static bool MatchObjectTag(const std::string& src, const Object& obj,
                         int& minTagLength)
 {
     bool result = false;
@@ -38,41 +38,41 @@ static bool matchObjectTag(const std::string& src, const Object& obj,
     {
         int tagLength = tag.length();
         if( tagLength <= minTagLength
-            || !compareWithTag(src, tag)) continue;
+            || !CompareWithTag(src, tag)) continue;
         minTagLength = tagLength;
         result = true;
     }
     return result;
 }
 
-static Object *findByTagRecursive(Object* head, const std::string& input,
+static Object *FindByTagRecursion(Object* head, const std::string& input,
                         int &minTagLength, bool deepSearch)
 {
     Object *match = nullptr;
     for(Object* o=head; o!=nullptr; o=o->next)
     {
-        if(o != gpPlayer && matchObjectTag(input, *o, minTagLength))
+        if(o != gpPlayer && MatchObjectTag(input, *o, minTagLength))
         {
             match = o;
         }
 
         if(deepSearch)
         {
-            Object* possibleMatch = findByTagRecursive(head->inventoryHead, input, minTagLength, true);
+            Object* possibleMatch = FindByTagRecursion(head->inventoryHead, input, minTagLength, true);
             if(possibleMatch != nullptr) match = possibleMatch;
         }
     }
     return match;
 }
 
-static Object *findByTag(const std::string& input,
+static Object *FindByTag(const std::string& input,
                         int& minTagLength,
                         Distance minDistance, Distance maxDistance)
 {
     Object* match = nullptr;
     if(IsInRange(DISTANCE_SELF, minDistance, maxDistance))
     {
-        if(matchObjectTag(input, *gpPlayer, minTagLength))
+        if(MatchObjectTag(input, *gpPlayer, minTagLength))
         {
             match = gpPlayer;
         }
@@ -81,7 +81,7 @@ static Object *findByTag(const std::string& input,
     if(IsInRange(DISTANCE_LOCATION, minDistance, maxDistance))
     {
         Object* parent = gpPlayer->parent;
-        if(matchObjectTag(input, *parent, minTagLength))
+        if(MatchObjectTag(input, *parent, minTagLength))
         {
             match = parent;
         }
@@ -90,23 +90,23 @@ static Object *findByTag(const std::string& input,
     if(IsInRange(DISTANCE_INVENTORY, minDistance, maxDistance))
     {
         bool doDeepSearch = IsInRange(DISTANCE_INVENTORY_CONTAINED, minDistance, maxDistance);
-        Object* possibleMatch = findByTagRecursive(gpPlayer->inventoryHead, input, minTagLength, doDeepSearch);
+        Object* possibleMatch = FindByTagRecursion(gpPlayer->inventoryHead, input, minTagLength, doDeepSearch);
         if(possibleMatch != nullptr) match = possibleMatch;
     }
 
     if(IsInRange(DISTANCE_NEAR, minDistance, maxDistance))
     {
         bool doDeepSearch = IsInRange(DISTANCE_NEAR_CONTAINED, minDistance, maxDistance);
-        Object *possibleMatch = findByTagRecursive(gpPlayer->parent->inventoryHead, input, minTagLength, doDeepSearch);
+        Object *possibleMatch = FindByTagRecursion(gpPlayer->parent->inventoryHead, input, minTagLength, doDeepSearch);
         if(possibleMatch != nullptr) match = possibleMatch;
     }
 
     return match;
 }
 
-static bool matchCommand(const std::string& input, const Command& cmd)
+static bool MatchCommand(const std::string& input, const Command& cmd)
 {
-    clearArgs();
+    ClearArgs();
     Object *match = nullptr;
 
     std::string::const_iterator pattern_it = cmd.pattern.begin();
@@ -121,15 +121,15 @@ static bool matchCommand(const std::string& input, const Command& cmd)
         {
             int index = std::distance(input.begin(), input_it);
             int minTagLength = 0;
-            match = findByTag(input.substr(index, input.length()-index), minTagLength, cmd.minDistance, cmd.maxDistance);
+            match = FindByTag(input.substr(index, input.length()-index), minTagLength, cmd.minDistance, cmd.maxDistance);
 
             if(match != nullptr)
             {
                 // ASCII:  A = 65, A -> 1st array element
                 int index = (*pattern_it)-65;
-                if(args[index] == nullptr)
+                if(gArgs[index] == nullptr)
                 {
-                    args[index] = match;
+                    gArgs[index] = match;
                 }
                 match = nullptr;
 
@@ -156,7 +156,7 @@ static bool matchCommand(const std::string& input, const Command& cmd)
     return true;
 }
 
-extern std::string getInput()
+extern std::string GetInput()
 {
     std::cout << "> ";
     std::string input;
@@ -164,13 +164,13 @@ extern std::string getInput()
     return input;
 }
 
-extern bool parseInput(const std::string& input)
+extern bool ParseInput(const std::string& input)
 {
     std::vector<Command> commands = GetCommands();
     Command* cmd = nullptr;
     for(Command command : commands)
     {
-        if(matchCommand(input, command))
+        if(MatchCommand(input, command))
         {
             cmd = &command;
             break;
@@ -181,7 +181,7 @@ extern bool parseInput(const std::string& input)
     {
         if(cmd->function != nullptr)
         {
-            return cmd->function(args);
+            return cmd->function(gArgs);
         }
         return true;
     }

@@ -23,7 +23,7 @@ static Object *FindByTagRecursion(Object* head, const std::string& input,
                         int &minTagLength, bool deepSearch);
 static Object *FindByTag(const std::string& input, int& minTagLength,
                         Distance minDistance, Distance maxDistance);
-static bool matchCommand(const std::string& input, const Command& cmd);
+static bool MatchCommand(const std::string& input, const Command& cmd);
 
 extern std::string GetInput();
 extern bool ParseInput(const std::string& input);
