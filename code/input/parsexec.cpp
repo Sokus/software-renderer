@@ -18,7 +18,7 @@ static bool compareWithTag(const std::string& src, const std::string& tag)
         while(*src_it==' ' && src_it!=src.end()) src_it++;
         while(*tag_it==' ' && tag_it!=tag.end()) tag_it++;
 
-        bool charactersMatch = compareCharactersInsensitive(*src_it, *tag_it);
+        bool charactersMatch = CompareCharInsensitive(*src_it, *tag_it);
         bool sourceEnded = (src_it == src.end());
         if( !charactersMatch || sourceEnded)
         {
@@ -51,7 +51,7 @@ static Object *findByTagRecursive(Object* head, const std::string& input,
     Object *match = nullptr;
     for(Object* o=head; o!=nullptr; o=o->next)
     {
-        if(o != &player && matchObjectTag(input, *o, minTagLength))
+        if(o != gpPlayer && matchObjectTag(input, *o, minTagLength))
         {
             match = o;
         }
@@ -70,34 +70,34 @@ static Object *findByTag(const std::string& input,
                         Distance minDistance, Distance maxDistance)
 {
     Object* match = nullptr;
-    if(isInRange(DISTANCE_SELF, minDistance, maxDistance))
+    if(IsInRange(DISTANCE_SELF, minDistance, maxDistance))
     {
-        if(matchObjectTag(input, player, minTagLength))
+        if(matchObjectTag(input, *gpPlayer, minTagLength))
         {
-            match = &player;
+            match = gpPlayer;
         }
     }
 
-    if(isInRange(DISTANCE_LOCATION, minDistance, maxDistance))
+    if(IsInRange(DISTANCE_LOCATION, minDistance, maxDistance))
     {
-        Object* parent = player.parent;
+        Object* parent = gpPlayer->parent;
         if(matchObjectTag(input, *parent, minTagLength))
         {
             match = parent;
         }
     }
 
-    if(isInRange(DISTANCE_INVENTORY, minDistance, maxDistance))
+    if(IsInRange(DISTANCE_INVENTORY, minDistance, maxDistance))
     {
-        bool doDeepSearch = isInRange(DISTANCE_INVENTORY_CONTAINED, minDistance, maxDistance);
-        Object* possibleMatch = findByTagRecursive(player.inventoryHead, input, minTagLength, doDeepSearch);
+        bool doDeepSearch = IsInRange(DISTANCE_INVENTORY_CONTAINED, minDistance, maxDistance);
+        Object* possibleMatch = findByTagRecursive(gpPlayer->inventoryHead, input, minTagLength, doDeepSearch);
         if(possibleMatch != nullptr) match = possibleMatch;
     }
 
-    if(isInRange(DISTANCE_NEAR, minDistance, maxDistance))
+    if(IsInRange(DISTANCE_NEAR, minDistance, maxDistance))
     {
-        bool doDeepSearch = isInRange(DISTANCE_NEAR_CONTAINED, minDistance, maxDistance);
-        Object *possibleMatch = findByTagRecursive(player.parent->inventoryHead, input, minTagLength, doDeepSearch);
+        bool doDeepSearch = IsInRange(DISTANCE_NEAR_CONTAINED, minDistance, maxDistance);
+        Object *possibleMatch = findByTagRecursive(gpPlayer->parent->inventoryHead, input, minTagLength, doDeepSearch);
         if(possibleMatch != nullptr) match = possibleMatch;
     }
 
@@ -117,7 +117,7 @@ static bool matchCommand(const std::string& input, const Command& cmd)
         while(*pattern_it==' ' && pattern_it!=cmd.pattern.end()) pattern_it++;
         while(*input_it==' ' && input_it!=input.end()) input_it++;
 
-        if(isUpper(*pattern_it))
+        if(IsUpper(*pattern_it))
         {
             int index = std::distance(input.begin(), input_it);
             int minTagLength = 0;
@@ -144,7 +144,7 @@ static bool matchCommand(const std::string& input, const Command& cmd)
         }
         else
         {
-            bool charactersMatch = compareCharactersInsensitive(*input_it, *pattern_it);
+            bool charactersMatch = CompareCharInsensitive(*input_it, *pattern_it);
             bool sourceEnded = (input_it == input.end());
             if( !charactersMatch || sourceEnded) return false;
         }
@@ -156,31 +156,24 @@ static bool matchCommand(const std::string& input, const Command& cmd)
     return true;
 }
 
+extern std::string getInput()
+{
+    std::cout << "> ";
+    std::string input;
+    std::getline(std::cin, input);
+    return input;
+}
 
 extern bool parseInput(const std::string& input)
 {
-    std::vector<Command> commands = 
-    {
-        Command("quit"       ,(Distance)0, (Distance)0, executeQuit),
-        Command("go A"       ,DISTANCE_NEAR, DISTANCE_NEAR, executeTravel),
-        Command("go to A"    ,DISTANCE_NEAR, DISTANCE_NEAR, executeTravel),
-        Command("enter A"    ,DISTANCE_NEAR, DISTANCE_NEAR, executeTravel),
-        Command("look around",(Distance)0, (Distance)0, executeLookAround),
-        Command("look at A"  ,DISTANCE_INVENTORY, DISTANCE_NEAR_CONTAINED, executeLookAt),
-        Command("examine A"  ,DISTANCE_INVENTORY, DISTANCE_NEAR_CONTAINED, executeLookAt),
-        Command("pick up A"  ,DISTANCE_NEAR, DISTANCE_NEAR_CONTAINED, executePickUp),
-        Command("get A"      ,DISTANCE_NEAR, DISTANCE_NEAR_CONTAINED, executePickUp),
-        Command("drop A"     ,DISTANCE_INVENTORY, DISTANCE_INVENTORY_CONTAINED, executeDrop),
-        Command("help"       ,(Distance)0, (Distance)0, executeHelp)
-    };
-
+    std::vector<Command> commands = GetCommands();
     Command* cmd = nullptr;
     for(Command command : commands)
     {
         if(matchCommand(input, command))
         {
             cmd = &command;
-            break; 
+            break;
         }
     }
 

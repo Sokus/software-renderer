@@ -1,16 +1,16 @@
 #include "distance.hpp"
 
-Distance getDistance(const Object& from, const Object& to)
+Distance GetDistance(const Object& from, const Object& to)
 {
     if(&from == &to) return DISTANCE_SELF;
-    int depth = getDepth(from, to);
+    int depth = GetDepth(from, to);
     if(depth == 1) return DISTANCE_INVENTORY;
     if(depth > 1) return DISTANCE_INVENTORY_CONTAINED;
     const Object* parent = from.parent;
     if(parent != nullptr)
     {
         if(parent == &to) return DISTANCE_LOCATION;
-        depth = getDepth(*parent, to);
+        depth = GetDepth(*parent, to);
         if(depth == 1) return DISTANCE_NEAR;
         if(depth > 1) return DISTANCE_NEAR_CONTAINED;
     }
@@ -18,7 +18,7 @@ Distance getDistance(const Object& from, const Object& to)
     return DISTANCE_ABSENT;
 }
 
-int getDepth(const Object& container, const Object& obj)
+int GetDepth(const Object& container, const Object& obj)
 {
     int value;
     for(Object* inv=container.inventoryHead; inv != nullptr; inv = inv->next)
@@ -27,7 +27,7 @@ int getDepth(const Object& container, const Object& obj)
         {
             return 1;
         }
-        value = getDepth(*inv, obj);
+        value = GetDepth(*inv, obj);
         if(value != 0)
         {
             return 1 + value;
@@ -36,7 +36,7 @@ int getDepth(const Object& container, const Object& obj)
     return 0;
 }
 
-bool isInRange(Distance value, Distance from, Distance to)
+bool IsInRange(Distance value, Distance from, Distance to)
 {
-    return from <= value && from <= to;
+    return from <= value && value <= to;
 }

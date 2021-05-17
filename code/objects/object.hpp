@@ -3,9 +3,7 @@
 
 #include <vector>
 #include <string>
-
-class Object;
-extern Object objectRoot, player;
+#include <iostream>
 
 class Object
 {
@@ -25,7 +23,9 @@ public:
     Object();
     Object(std::vector<std::string> tags, std::string description, std::string details, int weight, int capacity, int count);
 
-    void appendInv(Object& obj);
+    ~Object();
+
+    void AppendInventory(Object& obj);
 };
 
 #endif

@@ -1,12 +1,17 @@
 #include "object.hpp"
 
-Object::Object() {};
+Object::Object() { }
 
 Object::Object(std::vector<std::string> tags, std::string description, std::string details, int weight, int capacity, int count)
     : tags(tags), description(description), details(details), weight(weight), capacity(capacity), count(count) { }
 
-    
-void Object::appendInv(Object& obj)
+Object::~Object()
+{
+    delete inventoryHead;
+    delete next;
+}
+
+void Object::AppendInventory(Object& obj)
 {
     if(this->inventoryHead == nullptr)
     {

@@ -3,12 +3,9 @@
 
 #include <string>
 
-bool compareCharactersInsensitive(char a, char b);
-bool isUpper(char a);
+bool CompareCharInsensitive(char a, char b);
+bool IsUpper(char a);
 
-std::string capitalise(std::string src);
-
-std::string::iterator skipSpaces(std::string::iterator src);
-std::string::const_iterator skipSpaces(std::string::const_iterator src);
+std::string Capitalise(std::string src);
 
 #endif

@@ -3,8 +3,6 @@
 
 #include "../objects/object.hpp"
 
-extern Object objectHead;
-
 enum Distance
 {
     DISTANCE_SELF,
@@ -16,8 +14,8 @@ enum Distance
     DISTANCE_ABSENT
 };
 
-Distance getDistance(const Object& from, const Object& to);
-int getDepth(const Object& container, const Object& obj);
-bool isInRange(Distance value, Distance from, Distance to);
+Distance GetDistance(const Object& from, const Object& to);
+int GetDepth(const Object& container, const Object& obj);
+bool IsInRange(Distance value, Distance from, Distance to);
 
 #endif

@@ -4,13 +4,16 @@
 #include <iostream>
 #include <string>
 
+#include "../temporary.hpp"
 #include "distance.hpp"
-//#include "interact.h"
 #include "../objects/object.hpp"
 #include "../utility/strops.hpp"
 
-extern Object objectRoot;
-extern Object player;
+extern Object* gpObjectRoot;
+extern Object* gpPlayer;
+
+class Command;
+static std::vector<Command> commands;
 
 class Command
 {
@@ -20,16 +23,20 @@ public:
     Distance maxDistance;
     int (*function)(Object *args[]);
 
+    Command();
     Command(std::string pattern,
             Distance minDistance, Distance maxDistance,
             int (*function)(Object **));
 };
 
-int executeQuit(Object *args[]);
-int executeTravel(Object *args[]);
-int executeLookAround(Object *args[]);
-int executeLookAt(Object *args[]);
-int executePickUp(Object *args[]);
-int executeDrop(Object *args[]);
-int executeHelp(Object *args[]);
+std::vector<Command> GetCommands();
+static void CreateCommands();
+
+int ExecuteQuit(Object *args[]);
+int ExecuteTravel(Object *args[]);
+int ExecuteLookAround(Object *args[]);
+int ExecuteLookAt(Object *args[]);
+int ExecutePickUp(Object *args[]);
+int ExecuteDrop(Object *args[]);
+int ExecuteHelp(Object *args[]);
 #endif
