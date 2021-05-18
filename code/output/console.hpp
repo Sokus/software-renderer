@@ -16,7 +16,7 @@ namespace Console
         COLOR_CYAN,
         COLOR_WHITE,
         COLOR_BRIGHT_BLACK,
-        COLOR_BRIGHT_RER,
+        COLOR_BRIGHT_RED,
         COLOR_BRIGHT_GREEN,
         COLOR_BRIGHT_YELLOW,
         COLOR_BRIGHT_BLUE,

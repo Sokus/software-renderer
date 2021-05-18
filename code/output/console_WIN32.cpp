@@ -12,7 +12,7 @@ std::ostream& operator<<(std::ostream& os, Console::Color color)
     }
     else
     {
-        bool bright = color >= COLOR_BLACK;
+        bool bright = color >= COLOR_BRIGHT_BLACK;
         color = (Console::Color)((int)color % 8);
         attribute = color == COLOR_BLACK   ? 0 :
                     color == COLOR_BLUE    ? 1 :
