@@ -1,4 +1,4 @@
-if [ -d "build" ] then
+if [ -d "build" ]; then
     rmdir build
 fi
 mkdir build
