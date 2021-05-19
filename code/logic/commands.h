@@ -1,35 +1,26 @@
 #ifndef COMMANDS_H
 #define COMMANDS_H
 
-#include <iostream>
-#include <string>
+#include <stdio.h>
+#include <stdbool.h>
 
-#include "../temporary.hpp"
-#include "distance.hpp"
-#include "../objects/object.hpp"
-#include "../utility/strops.hpp"
+#include "../objects/object.h"
+#include "distance.h"
+#include "../utility/strops.h"
 
 extern Object* gpObjectRoot;
 extern Object* gpPlayer;
 
-class Command;
-static std::vector<Command> commands;
-
-class Command
+typedef struct
 {
-public:
-    std::string pattern;
+    char *pattern;
     Distance minDistance;
     Distance maxDistance;
     bool (*function)(Object *args[]);
+} Command;
+static Command commands[32];
 
-    Command();
-    Command(std::string pattern,
-            Distance minDistance, Distance maxDistance,
-            bool (*function)(Object **));
-};
-
-std::vector<Command> GetCommands();
+Command* GetCommands();
 static void CreateCommands();
 
 bool ExecuteQuit(Object *args[]);

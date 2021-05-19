@@ -1,8 +1,8 @@
 #ifndef TEMPORARY_H
 #define TEMPORARY_H
 
-#include "objects/object.hpp"
-#include "limits.h"
+#include "objects/object.h"
+#include "utility/strops.h"
 
 extern Object* gpObjectRoot;
 extern Object* gpPlayer;

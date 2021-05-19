@@ -1,36 +1,36 @@
-#include "commands.hpp"
+#include "commands.h"
 
-Command::Command() : pattern(""), minDistance((Distance)0), maxDistance((Distance)0), function(nullptr) { }
-
-Command::Command(std::string pattern, Distance minDistance, Distance maxDistance, bool (*function)(Object **))
-: pattern(pattern), minDistance(minDistance), maxDistance(maxDistance), function(function) { }
-
-std::vector<Command> GetCommands()
+Command* GetCommands()
 {
-    if(commands.size() == 0) CreateCommands();
+    static bool commandsCreated = false;
+    if( !commandsCreated )
+    {
+        commandsCreated = true;
+        CreateCommands();
+    }
+
     return commands;
 }
 
 static void CreateCommands()
 {
-    commands.reserve(11);
-    commands.emplace_back(Command("quit",(Distance)0, (Distance)0, ExecuteQuit));
-    commands.emplace_back(Command("go A",DISTANCE_NEAR, DISTANCE_NEAR, ExecuteTravel));
-    commands.emplace_back(Command("go to A",DISTANCE_NEAR, DISTANCE_NEAR, ExecuteTravel));
-    commands.emplace_back(Command("enter A",DISTANCE_NEAR, DISTANCE_NEAR, ExecuteTravel));
-    commands.emplace_back(Command("look around", (Distance)0, (Distance)0, ExecuteLookAround));
-    commands.emplace_back(Command("look at A", DISTANCE_INVENTORY, DISTANCE_NEAR_CONTAINED, ExecuteLookAt));
-    commands.emplace_back(Command("examine A", DISTANCE_INVENTORY, DISTANCE_NEAR_CONTAINED, ExecuteLookAt));
-    commands.emplace_back(Command("pick up A", DISTANCE_NEAR, DISTANCE_NEAR_CONTAINED, ExecutePickUp));
-    commands.emplace_back(Command("get A", DISTANCE_NEAR, DISTANCE_NEAR_CONTAINED, ExecutePickUp));
-    commands.emplace_back(Command("drop A", DISTANCE_INVENTORY, DISTANCE_INVENTORY_CONTAINED, ExecuteDrop));
-    commands.emplace_back(Command("help", (Distance)0, (Distance)0, ExecuteHelp));
+    commands[0] = (Command) { Copy("quit"),(Distance)0, (Distance)0, ExecuteQuit };
+    commands[1] = (Command) { Copy("go A"),DISTANCE_NEAR, DISTANCE_NEAR, ExecuteTravel };
+    commands[2] = (Command) { Copy("go to A"),DISTANCE_NEAR, DISTANCE_NEAR, ExecuteTravel };
+    commands[3] = (Command) { Copy("enter A"),DISTANCE_NEAR, DISTANCE_NEAR, ExecuteTravel };
+    commands[4] = (Command) { Copy("look around"), (Distance)0, (Distance)0, ExecuteLookAround };
+    commands[5] = (Command) { Copy("look at A"), DISTANCE_INVENTORY, DISTANCE_NEAR_CONTAINED, ExecuteLookAt };
+    commands[6] = (Command) { Copy("examine A"), DISTANCE_INVENTORY, DISTANCE_NEAR_CONTAINED, ExecuteLookAt };
+    commands[7] = (Command) { Copy("pick up A"), DISTANCE_NEAR, DISTANCE_NEAR_CONTAINED, ExecutePickUp };
+    commands[8] = (Command) { Copy("get A"), DISTANCE_NEAR, DISTANCE_NEAR_CONTAINED, ExecutePickUp };
+    commands[9] = (Command) { Copy("drop A"), DISTANCE_INVENTORY, DISTANCE_INVENTORY_CONTAINED, ExecuteDrop };
+    commands[10] = (Command) { Copy("help"), (Distance)0, (Distance)0, ExecuteHelp };
 }
 
 bool ExecuteQuit(Object *args[])
 {
-    std::cout << "Goodbye." << std::endl;
-    return 0;
+    printf("Goodbye.\n");
+    return false;
 }
 
 bool ExecuteTravel(Object *args[])
@@ -50,29 +50,29 @@ bool ExecuteTravel(Object *args[])
         }
     }
     */
-    return 1;
+    return true;
 }
 
 bool ExecuteLookAround(Object *args[])
 {
-    std::cout << gpPlayer->parent->details << std::endl;
-    std::cout << "You can see:" << std::endl;
-    for(Object *o=gpPlayer->parent->inventoryHead; o!=NULL; o=o->next)
+    printf("%s\n", gpPlayer->parent->details);
+    printf("You can see:\n");
+    for(Object* o=gpPlayer->parent->inventoryHead; o != NULL; o = o->next)
     {
         if(o == gpPlayer) continue;
-        std::cout << o->description << std::endl;
-    }   
-    return 1;
+        printf("%s\n", o->description);
+    }
+    return true;
 }
 
 bool ExecuteLookAt(Object *args[])
 {
     Object* objA = args[0];
-    if(objA != nullptr)
+    if(objA != NULL)
     {
-        std::cout << objA->description << std::endl;
+        printf("%s\n", objA->description);
     }
-    return 1;
+    return true;
 }
 
 bool ExecutePickUp(Object *args[])
@@ -96,7 +96,7 @@ bool ExecutePickUp(Object *args[])
         }
     }
     */
-    return 1;
+    return true;
 }
 
 bool ExecuteDrop(Object *args[])
@@ -120,28 +120,30 @@ bool ExecuteDrop(Object *args[])
         }
     }
     */
-    return 1;
+    return true;
 }
 
 bool ExecuteHelp(Object *args[])
 {
-    size_t size = commands.size();
-    for(size_t i=0; i<size; i++)
+    int size = 32;
+    for(int i=0; i<size; i++)
     {
-        std::cout << commands[i].pattern;
+        printf("%s", commands[i].pattern);
         if(i < (size-1))
         {
+            if(commands[i+1].pattern == NULL) break;
             if(commands[i].function == commands[i+1].function)
             {
-                std::cout << ", ";
+                printf(", ");
             }
             else
             {
-                std::cout << std::endl;
+                printf("\n");
             }
         }
     }
-    std::cout << std::endl;
-    return 1;
+    printf("\n");
+    return true;
 }
+
 

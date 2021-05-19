@@ -1,9 +1,11 @@
 #ifndef DISTANCE_H
 #define DISTANCE_H
 
-#include "../objects/object.hpp"
+#include <stdbool.h>
 
-enum Distance
+#include "../objects/object.h"
+
+typedef enum
 {
     DISTANCE_SELF,
     DISTANCE_INVENTORY,
@@ -12,10 +14,10 @@ enum Distance
     DISTANCE_NEAR,
     DISTANCE_NEAR_CONTAINED,
     DISTANCE_ABSENT
-};
+} Distance;
 
-Distance GetDistance(const Object& from, const Object& to);
-int GetDepth(const Object& container, const Object& obj);
+Distance GetDistance(const Object* from, const Object* to);
+int GetDepth(const Object* container, const Object* obj);
 bool IsInRange(Distance value, Distance from, Distance to);
 
 #endif
