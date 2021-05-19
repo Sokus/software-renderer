@@ -21,22 +21,22 @@ public:
     std::string pattern;
     Distance minDistance;
     Distance maxDistance;
-    int (*function)(Object *args[]);
+    bool (*function)(Object *args[]);
 
     Command();
     Command(std::string pattern,
             Distance minDistance, Distance maxDistance,
-            int (*function)(Object **));
+            bool (*function)(Object **));
 };
 
 std::vector<Command> GetCommands();
 static void CreateCommands();
 
-int ExecuteQuit(Object *args[]);
-int ExecuteTravel(Object *args[]);
-int ExecuteLookAround(Object *args[]);
-int ExecuteLookAt(Object *args[]);
-int ExecutePickUp(Object *args[]);
-int ExecuteDrop(Object *args[]);
-int ExecuteHelp(Object *args[]);
+bool ExecuteQuit(Object *args[]);
+bool ExecuteTravel(Object *args[]);
+bool ExecuteLookAround(Object *args[]);
+bool ExecuteLookAt(Object *args[]);
+bool ExecutePickUp(Object *args[]);
+bool ExecuteDrop(Object *args[]);
+bool ExecuteHelp(Object *args[]);
 #endif

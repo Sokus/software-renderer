@@ -56,7 +56,7 @@ static Object *FindByTagRecursion(Object* head, const std::string& input,
             match = o;
         }
 
-        if(deepSearch)
+        if(deepSearch /*&& !ObjectHasProperty(*head, ObjectProperty::OBJECT_PROPERTY_HIDDEN_EQUIPMENT)*/)
         {
             Object* possibleMatch = FindByTagRecursion(head->inventoryHead, input, minTagLength, true);
             if(possibleMatch != nullptr) match = possibleMatch;

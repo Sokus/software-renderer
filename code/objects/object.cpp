@@ -2,8 +2,10 @@
 
 Object::Object() { }
 
-Object::Object(std::vector<std::string> tags, std::string description, std::string details, int weight, int capacity, int count)
-    : tags(tags), description(description), details(details), weight(weight), capacity(capacity), count(count) { }
+Object::Object(std::vector<std::string> tags, std::string description, std::string details)
+    : tags(tags), description(description), details(details)
+    {
+    }
 
 Object::~Object()
 {

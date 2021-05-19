@@ -5,20 +5,17 @@ Object* gpPlayer = nullptr;
 
 void CreateObjects()
 {
-    gpObjectRoot = new Object({}, std::string("root"), std::string(), 0, 0, 0);
+    gpObjectRoot = new Object({}, std::string("root"), std::string());
     gpPlayer = new Object({"player"},
                         "a player",
-                        "This is you.",
-                        0, 0, 0);
+                        "This is you.");
 
     Object* field = new Object({"field", "grassy field"},
                         "a grassy field",
-                        "Huge field covered in grass.",
-                        INT_MAX, INT_MAX, 1);
+                        "Huge field covered in grass.");
     Object* guard = new Object({"guard", "city guard"},
                         "a city guard",
-                        "Man who guards the city.",
-                        120, 40, 1);
+                        "Man who guards the city.");
 
     gpObjectRoot->AppendInventory(*field);
     field->AppendInventory(*gpPlayer);
@@ -27,6 +24,5 @@ void CreateObjects()
 
 void DeleteObjects()
 {
-    
     delete gpObjectRoot;
 }

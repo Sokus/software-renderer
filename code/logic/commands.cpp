@@ -2,7 +2,7 @@
 
 Command::Command() : pattern(""), minDistance((Distance)0), maxDistance((Distance)0), function(nullptr) { }
 
-Command::Command(std::string pattern, Distance minDistance, Distance maxDistance, int (*function)(Object **))
+Command::Command(std::string pattern, Distance minDistance, Distance maxDistance, bool (*function)(Object **))
 : pattern(pattern), minDistance(minDistance), maxDistance(maxDistance), function(function) { }
 
 std::vector<Command> GetCommands()
@@ -27,21 +27,21 @@ static void CreateCommands()
     commands.emplace_back(Command("help", (Distance)0, (Distance)0, ExecuteHelp));
 }
 
-int ExecuteQuit(Object *args[])
+bool ExecuteQuit(Object *args[])
 {
     std::cout << "Goodbye." << std::endl;
     return 0;
 }
 
-int ExecuteTravel(Object *args[])
+bool ExecuteTravel(Object *args[])
 {
+    /*
     Object *objA = args[0];
-    if(objA != NULL)
+    if(objA != nullptr)
     {
-        if(objA->destination != NULL)
+        if(objA->destination != nullptr && ObjectHasProperty(*objA, ObjectProperty::OBJECT_PROPERTY_TRAVERSABLE))
         {
             //doTravel(&player, objA);
-            std::cout << "Traveled " << objA->description << "." << std::endl;
         }
         else
         {
@@ -49,10 +49,11 @@ int ExecuteTravel(Object *args[])
             std::cout << description << " can't be traveled." << std::endl;
         }
     }
+    */
     return 1;
 }
 
-int ExecuteLookAround(Object *args[])
+bool ExecuteLookAround(Object *args[])
 {
     std::cout << gpPlayer->parent->details << std::endl;
     std::cout << "You can see:" << std::endl;
@@ -64,7 +65,7 @@ int ExecuteLookAround(Object *args[])
     return 1;
 }
 
-int ExecuteLookAt(Object *args[])
+bool ExecuteLookAt(Object *args[])
 {
     Object* objA = args[0];
     if(objA != nullptr)
@@ -74,8 +75,9 @@ int ExecuteLookAt(Object *args[])
     return 1;
 }
 
-int ExecutePickUp(Object *args[])
+bool ExecutePickUp(Object *args[])
 {
+    /*
     Object *objA = args[0];
     if(objA != NULL)
     {
@@ -93,12 +95,13 @@ int ExecutePickUp(Object *args[])
             std::cout << description << " won't fit in your pockets." << std::endl;
         }
     }
-    
+    */
     return 1;
 }
 
-int ExecuteDrop(Object *args[])
+bool ExecuteDrop(Object *args[])
 {
+    /*
     Object *objA = args[0];
     if(objA != NULL)
     {
@@ -116,10 +119,11 @@ int ExecuteDrop(Object *args[])
             std::cout << "There is nowhere to drop " << objA->description << "." << std::endl;
         }
     }
+    */
     return 1;
 }
 
-int ExecuteHelp(Object *args[])
+bool ExecuteHelp(Object *args[])
 {
     size_t size = commands.size();
     for(size_t i=0; i<size; i++)
