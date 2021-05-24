@@ -26,5 +26,6 @@ typedef enum
 } Console_Color;
 
 void Console_Print(const char* message, Console_Color color);
+void Console_Clear();
 
 #endif

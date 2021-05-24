@@ -1,68 +1,90 @@
 #include "parsexec.h"
 
-static void ClearArgs()
+bool ParseInput(const char *input)
 {
-    for(int i=0; i<26; i++)
+    if(input && GetLength(input))
     {
-        gArgs[i] = NULL;
-    }
-}
-
-static bool CompareWithTag(const char* src, const char* tag)
-{
-    while(*tag != '\0')
-    {
-        src = SkipSpaces(src);
-        tag = SkipSpaces(tag);
-
-        bool charactersMatch = CompareCharInsenitive(*src, *tag);
-        bool sourceEnded = (*src == '\0');
-        if( !charactersMatch || sourceEnded )
+        Command* commands = GetCommands();
+        Command* cmd = NULL;
+        for(int i=0; i<32; i++)
         {
-            return false;
+            if(MatchCommand(input, commands+i))
+            {
+                cmd = commands+i;
+                break;
+            }
         }
 
-        src++;
-        tag++;
+        if(cmd)
+        {
+            if(cmd->function) return cmd->function(gArgs);
+        }
+        else
+        {
+            printf("I don't know what you're trying to do.\n");
+        }
     }
     return true;
 }
 
-static bool MatchObjectTag(const char* src, const Object* obj, int* minTagLength)
+static bool MatchCommand(const char* src, const Command* cmd)
 {
-    bool result = false;
-    const char* tag;
-    for(int i=0; i<8; i++)
+    for(int i=0; i<COMMANDS_MAX_PATTERNS; i++)
     {
-        tag = obj->tags[i];
-        if(!tag) continue;
-        int tagLength = GetLength(tag);
-        if( tagLength <= *minTagLength
-            || !CompareWithTag(src, tag)) continue;
-        *minTagLength = tagLength;
-        result = true;
+        const char* pattern = cmd->patterns[i];
+        if(MatchPattern(src, pattern, cmd->minDistance, cmd->maxDistance))
+        {
+            return true;
+        }
     }
-    return result;
+    return false;
 }
 
-static Object* FindByTagRecursive(const char* src, Object* head,
-                                  int* minTagLength, bool deepSearch)
+static bool MatchPattern(const char* src, const char* pattern,
+                        Distance minDistance, Distance maxDistance)
 {
+    if(!pattern) return false;
+
+    ClearArgs();
     Object* match = NULL;
-    for(Object* o=head; o != NULL; o=o->next)
+
+    while(*pattern != '\0')
     {
-        if(o != gpPlayer && MatchObjectTag(src, o, minTagLength))
+        src = SkipSpaces(src);
+        pattern = SkipSpaces(pattern);
+
+        if(IsUpper(*pattern))
         {
-            match = o;
+            int minTagLength = 0;
+            match = FindByTag(src, &minTagLength, minDistance, maxDistance);
+
+            if(match)
+            {
+                int index = (int)(*pattern) - 65;
+                if(!gArgs[index]) gArgs[index] = match;
+                match = NULL;
+                src += (minTagLength-1); 
+            }
+            else
+            {
+                return false;
+            }
+        }
+        else
+        {
+            bool charactersMatch = CompareCharInsensitive(*src, *pattern);
+            bool sourceEnded = (*src == '\0');
+            if( !charactersMatch || sourceEnded )
+            {
+                return false;
+            }
         }
 
-        if(deepSearch /*&& !ObjectHasProperty(*head, ObjectProperty::OBJECT_PROPERTY_HIDDEN_EQUIPMENT)*/)
-        {
-            Object* possibleMatch = FindByTagRecursive(src, head->inventoryHead, minTagLength, true);
-            if(possibleMatch != NULL) match = possibleMatch;
-        }
+        src++;
+        pattern++;
     }
-    return match;
+
+    return true;
 }
 
 static Object* FindByTag(const char* src, int* minTagLength,
@@ -88,66 +110,76 @@ static Object* FindByTag(const char* src, int* minTagLength,
     {
         bool doDeepSearch = IsInRange(DISTANCE_INVENTORY_CONTAINED, minDistance, maxDistance);
         Object* possibleMatch = FindByTagRecursive(src, gpPlayer->inventoryHead, minTagLength, doDeepSearch);
-        if(possibleMatch != NULL) match = possibleMatch;
+        if(possibleMatch) match = possibleMatch;
     }
 
     if(IsInRange(DISTANCE_NEAR, minDistance, maxDistance))
     {
         bool doDeepSearch = IsInRange(DISTANCE_NEAR_CONTAINED, minDistance, maxDistance);
         Object* possibleMatch = FindByTagRecursive(src, gpPlayer->parent->inventoryHead, minTagLength, doDeepSearch);
-        if(possibleMatch != NULL) match = possibleMatch;
+        if(possibleMatch) match = possibleMatch;
     }
 
     return match;
 }
 
-static bool MatchCommand(const char* src, const Command* cmd)
+static Object* FindByTagRecursive(const char* src, Object* head,
+                                  int* minTagLength, bool deepSearch)
 {
-    ClearArgs();
     Object* match = NULL;
+    for(Object* pObj=head; pObj != NULL; pObj=pObj->next)
+    {
+        if(MatchObjectTag(src, pObj, minTagLength))
+        {
+            match = pObj;
+        }
 
-    const char* pattern = cmd->pattern;
+        if(deepSearch && HasProperty(pObj, OBJECT_PROPERTY_VISIBLE_INVENTORY))
+        {
+            Object* possibleMatch = FindByTagRecursive(src, pObj->inventoryHead, minTagLength, true);
+            if(possibleMatch != NULL) match = possibleMatch;
+        }
+    }
+    return match;
+}
 
-    while(*pattern != '\0')
+static bool MatchObjectTag(const char* src, const Object* obj, int* minTagLength)
+{
+    if(!obj) return false;
+    bool result = false;
+    const char* tag;
+    for(int i=0; i<OBJECT_MAX_TAGS; i++)
+    {
+        tag = obj->tags[i];
+        if(tag)
+        {
+            int tagLength = GetLength(tag);
+            if( tagLength <= *minTagLength
+                || !CompareWithTag(src, tag)) continue;
+            *minTagLength = tagLength;
+            result = true;
+        }
+    }
+    return result;
+}
+
+static bool CompareWithTag(const char* src, const char* tag)
+{
+    while(*tag != '\0')
     {
         src = SkipSpaces(src);
-        pattern = SkipSpaces(pattern);
+        tag = SkipSpaces(tag);
 
-        if(IsUpper(*pattern))
+        bool charactersMatch = CompareCharInsensitive(*src, *tag);
+        bool sourceEnded = (*src == '\0');
+        if( !charactersMatch || sourceEnded )
         {
-            int minTagLength = 0;
-            match = FindByTag(src, &minTagLength, cmd->minDistance, cmd->maxDistance);
-
-            if(match != NULL)
-            {
-                // ASCII:  A = 65, A -> 1st array element
-                int index = (int)(*pattern) - 65;
-                if(gArgs[index] == NULL)
-                {
-                    gArgs[index] = match;
-                }
-                match = NULL;
-
-                // skip the name of matching object in the input string
-                // to continue the comparison
-                src += (minTagLength-1); 
-            }
-            else
-            {
-                return false;
-            }
-        }
-        else
-        {
-            bool charactersMatch = CompareCharInsenitive(*src, *pattern);
-            bool sourceEnded = (*src == '\0');
-            if( !charactersMatch || sourceEnded ) return false;
+            return false;
         }
 
         src++;
-        pattern++;
+        tag++;
     }
-
     return true;
 }
 
@@ -159,8 +191,7 @@ void GetInput(char** buffer)
 
     char input;
     int characters_read = 0;
-
-    printf("> ");
+    
     while(input=getc(stdin), input != '\n')
     {
         if(characters_read < INPUT_SIZE)
@@ -173,30 +204,10 @@ void GetInput(char** buffer)
     *((*buffer) + end_offset) = '\0';
 }
 
-bool ParseInput(const char *input)
+static void ClearArgs()
 {
-    Command* commands = GetCommands();
-    Command* cmd = NULL;
-    for(int i=0; i<32; i++)
+    for(int i=0; i<26; i++)
     {
-        if(commands[i].pattern == NULL) continue;
-        if(MatchCommand(input, commands+i))
-        {
-            cmd = commands+i;
-            break;
-        }
+        gArgs[i] = NULL;
     }
-
-    if(cmd)
-    {
-        if(cmd->function)
-        {
-            return cmd->function(gArgs);
-        }
-    }
-    else
-    {
-        printf("I don't know what you're trying to do.\n");
-    }
-    return true;
 }

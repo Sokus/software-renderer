@@ -19,3 +19,8 @@ void Console_Print(const char* message, Console_Color color)
         printf(format, attribute, message);
     }
 }
+
+void Console_Clear()
+{
+    printf("\033[2J");
+}

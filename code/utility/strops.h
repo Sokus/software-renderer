@@ -10,6 +10,7 @@ bool IsUpper(char letter);
 bool IsLetter(char letter);
 char* Copy(char* src); 
 void Capitalise(char* src);
-bool CompareCharInsenitive(char a, char b);
+bool CompareCharInsensitive(char a, char b);
+bool CompareStringInsensitive(const char* srcA, const char* srcB);
 
 #endif

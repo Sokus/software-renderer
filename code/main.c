@@ -8,20 +8,14 @@
 int main()
 {
     CreateObjects();
-    for(int i=1; i<16; i++)
+    char* buffer = Copy("look around");
+    while(true)
     {
-        Console_Print("I have had enough...\n", (Console_Color)i);
-    }
-    /*
-    char* buffer;
-    GetInput(&buffer);
-    while(ParseInput(buffer))
-    {
-        // game loop
+        if( !ParseInput(buffer)) break;
 
+        printf("\n> ");
         GetInput(&buffer);
     }
-    */
     DeleteObjects();
     printf("Press enter to continue...\n");
     getc(stdin);

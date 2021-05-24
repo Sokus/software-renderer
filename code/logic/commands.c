@@ -9,22 +9,43 @@ Command* GetCommands()
         CreateCommands();
     }
 
-    return commands;
+    return gCommands;
 }
 
 static void CreateCommands()
 {
-    commands[0] = (Command) { Copy("quit"),(Distance)0, (Distance)0, ExecuteQuit };
-    commands[1] = (Command) { Copy("go A"),DISTANCE_NEAR, DISTANCE_NEAR, ExecuteTravel };
-    commands[2] = (Command) { Copy("go to A"),DISTANCE_NEAR, DISTANCE_NEAR, ExecuteTravel };
-    commands[3] = (Command) { Copy("enter A"),DISTANCE_NEAR, DISTANCE_NEAR, ExecuteTravel };
-    commands[4] = (Command) { Copy("look around"), (Distance)0, (Distance)0, ExecuteLookAround };
-    commands[5] = (Command) { Copy("look at A"), DISTANCE_INVENTORY, DISTANCE_NEAR_CONTAINED, ExecuteLookAt };
-    commands[6] = (Command) { Copy("examine A"), DISTANCE_INVENTORY, DISTANCE_NEAR_CONTAINED, ExecuteLookAt };
-    commands[7] = (Command) { Copy("pick up A"), DISTANCE_NEAR, DISTANCE_NEAR_CONTAINED, ExecutePickUp };
-    commands[8] = (Command) { Copy("get A"), DISTANCE_NEAR, DISTANCE_NEAR_CONTAINED, ExecutePickUp };
-    commands[9] = (Command) { Copy("drop A"), DISTANCE_INVENTORY, DISTANCE_INVENTORY_CONTAINED, ExecuteDrop };
-    commands[10] = (Command) { Copy("help"), (Distance)0, (Distance)0, ExecuteHelp };
+
+    gCommands[0] = (Command) { {Copy("look around")},
+                                0, 0, ExecuteLookAround };
+    
+    gCommands[1] = (Command) { {Copy("look at A"), Copy("examine A"), Copy("check A")},
+                                DISTANCE_INVENTORY, DISTANCE_NEAR_CONTAINED, ExecuteLookAt };
+
+    gCommands[2] = (Command) { {Copy("look inside A"), Copy("look into A"), Copy("look in A")},
+                                DISTANCE_SELF, DISTANCE_NEAR_CONTAINED, ExecuteLookInside };
+
+    gCommands[3] = (Command) { {Copy("check inventory"), Copy("inventory")},
+                                0, 0, ExecuteExamineInventory };
+
+    gCommands[4] = (Command) { {Copy("pick up A"), Copy("get A")},
+                                DISTANCE_NEAR, DISTANCE_NEAR_CONTAINED, ExecutePickUp };
+
+    gCommands[5] = (Command) { {Copy("put A into B"), Copy("put A in B"), Copy("insert A into B"), Copy("place A in B")},
+                                DISTANCE_INVENTORY, DISTANCE_NEAR_CONTAINED, ExecutePut };
+
+    gCommands[6] = (Command) { {Copy("drop A")},
+                                DISTANCE_INVENTORY, DISTANCE_INVENTORY_CONTAINED, ExecuteDrop };
+
+    /*
+    gCommands[7] = (Command) { {Copy("go A"), Copy("go to A"), Copy("enter A")},
+                                DISTANCE_NEAR, DISTANCE_NEAR, ExecuteTravel };
+    */
+    gCommands[8] = (Command) { {Copy("clear")}, 0, 0, ExecuteClear };
+
+    gCommands[9] = (Command) { {Copy("quit")}, 0, 0, ExecuteQuit };
+
+    gCommands[10] = (Command) { {Copy("help")},
+                                0, 0, ExecuteHelp };
 }
 
 bool ExecuteQuit(Object *args[])
@@ -56,11 +77,12 @@ bool ExecuteTravel(Object *args[])
 bool ExecuteLookAround(Object *args[])
 {
     printf("%s\n", gpPlayer->parent->details);
-    printf("You can see:\n");
-    for(Object* o=gpPlayer->parent->inventoryHead; o != NULL; o = o->next)
+    Object* pObj=gpPlayer->parent->inventoryHead;
+    if(pObj) printf("You can see:\n");
+    while(pObj)
     {
-        if(o == gpPlayer) continue;
-        printf("%s\n", o->description);
+        if(pObj != gpPlayer) printf("%s\n", pObj->description);
+        pObj = pObj->next;
     }
     return true;
 }
@@ -68,82 +90,149 @@ bool ExecuteLookAround(Object *args[])
 bool ExecuteLookAt(Object *args[])
 {
     Object* objA = args[0];
-    if(objA != NULL)
+    if(objA)
     {
-        printf("%s\n", objA->description);
+        printf("%s\n", objA->details);
+    }
+    return true;
+}
+
+bool ExecuteLookInside(Object* args[])
+{
+    Object* objA = args[0];
+    if(objA)
+    {
+        if( !HasProperty(objA, OBJECT_PROPERTY_VISIBLE_INVENTORY) )
+        {
+            printf("You can't look into %s.\n", objA->description);
+        }
+        else
+        {
+            printf("You look into %s.\n", objA->description);
+            if( !objA->inventoryHead )
+            {
+                printf("There is nothing.\n");
+            }
+            else
+            {
+                printf("There is:\n");
+                ListObjects(objA->inventoryHead);
+            }
+        }
+    }
+    return true;
+}
+
+bool ExecuteExamineInventory(Object* args[])
+{
+    if( !gpPlayer->inventoryHead )
+    {
+        printf("Your inventory is empty.\n");
+    }
+    else
+    {
+        printf("You have:\n");
+        ListObjects(gpPlayer->inventoryHead);
     }
     return true;
 }
 
 bool ExecutePickUp(Object *args[])
 {
-    /*
     Object *objA = args[0];
-    if(objA != NULL)
+    if(objA)
     {
-        // TODO: Calculate available capacity
-        // NOTE: This condition is temporary
-        // just for testing command system
-        if(gpPlayer->capacity >= objA->weight)
+        if( HasProperty(objA, OBJECT_PROPERTY_COLLECTABLE) )
         {
-            std::cout << "Picked up " << objA->description << "." << std::endl;
-            //doPickup(&player, objA);
+            RemoveFromInventory(objA);
+            AppendInventory(gpPlayer, objA);
+            printf("You got %s.\n", objA->description);
         }
         else
         {
-            std::string description = Capitalise(objA->description);
-            std::cout << description << " won't fit in your pockets." << std::endl;
+            char* description = Copy(objA->description);
+            Capitalise(description);
+            printf("%s can't be picked up.\n", description);
+            free(description);
         }
     }
-    */
     return true;
 }
 
 bool ExecuteDrop(Object *args[])
 {
-    /*
     Object *objA = args[0];
-    if(objA != NULL)
+    if(objA)
     {
-        Object *parent = gpPlayer->parent;
-        // TODO: Calculate available capacity
-        // NOTE: This condition is temporary
-        // just for testing command system
-        if(parent != NULL && parent->capacity >= objA->weight)
+        if( HasProperty(objA, OBJECT_PROPERTY_COLLECTABLE) )
         {
-            std::cout << "Dropped " << objA->description << "." << std::endl;
-            //doDrop(&player, objA);
+            DropItem(objA);
+            printf("You dropped %s.\n", objA->description);
         }
         else
         {
-            std::cout << "There is nowhere to drop " << objA->description << "." << std::endl;
+            char* description = Copy(objA->description);
+            Capitalise(description);
+            printf("%s can't be dropped.\n", description);
+            free(description);
         }
     }
-    */
+    return true;
+}
+
+bool ExecutePut(Object* args[])
+{
+    Object *objA = args[0];
+    Object *objB = args[1];
+    if(objA && objB)
+    {
+        if(objA == objB)
+        {
+            printf("You can't put %s in itself.\n", objA->description);
+            return true;
+        }
+
+        int depth = GetDepth(objA, objB);
+        if(depth > 0)
+        {
+            printf("You can't do that, %s is contained in %s.\n",
+                    objB->description, objA->description);
+            return true;
+        }
+
+        if( HasProperty(objA, OBJECT_PROPERTY_COLLECTABLE)
+            && HasProperty(objB, OBJECT_PROPERTY_VISIBLE_INVENTORY ))
+        {
+            printf("You placed %s in %s.\n", objA->description, objB->description);
+            RemoveFromInventory(objA);
+            AppendInventory(objB, objA);
+        }
+    }
+    return true;
+}
+
+bool ExecuteClear(Object* args[])
+{
+    Console_Clear();
     return true;
 }
 
 bool ExecuteHelp(Object *args[])
 {
-    int size = 32;
-    for(int i=0; i<size; i++)
+    for(int c_i=0; c_i<COMMANDS_MAX_COUNT; c_i++)
     {
-        printf("%s", commands[i].pattern);
-        if(i < (size-1))
+        bool anyPatternFound = false;
+        for(int p_i=0; p_i<COMMANDS_MAX_PATTERNS; p_i++)
         {
-            if(commands[i+1].pattern == NULL) break;
-            if(commands[i].function == commands[i+1].function)
+            char* pattern = gCommands[c_i].patterns[p_i];
+            if(pattern)
             {
-                printf(", ");
-            }
-            else
-            {
-                printf("\n");
+                anyPatternFound = true;
+                if(p_i != 0) printf(", ");
+                printf(pattern);
             }
         }
+        if(anyPatternFound) printf("\n");
     }
-    printf("\n");
     return true;
 }
-
-

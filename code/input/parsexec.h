@@ -7,6 +7,7 @@
 
 #include "../logic/commands.h"
 #include "../objects/object.h"
+#include "../objects/properties.h"
 #include "../utility/strops.h"
 
 extern Object* gpObjectRoot;
@@ -14,16 +15,18 @@ extern Object* gpPlayer;
 
 static Object* gArgs[26];
 
-static void ClearArgs();
-static bool CompareWithTag(const char* src, const char* tag);
-static bool MatchObjectTag(const char* src, const Object* obj, int* minTagLength);
-static Object* FindByTagRecursive(const char* src, Object* head,
-                                  int* minTagLength, bool deepSearch);
+bool ParseInput(const char *input);
+static bool MatchCommand(const char* src, const Command* cmd);
+static bool MatchPattern(const char* src, const char* pattern,
+                        Distance minDistance, Distance maxDistance);
 static Object* FindByTag(const char* src, int* minTagLength,
                          Distance minDistance, Distance maxDistance);
-static bool MatchCommand(const char* src, const Command* cmd);
+static Object* FindByTagRecursive(const char* src, Object* head,
+                                  int* minTagLength, bool deepSearch);
+static bool MatchObjectTag(const char* src, const Object* obj, int* minTagLength);
+static bool CompareWithTag(const char* src, const char* tag);
 
 void GetInput(char** buffer);
-bool ParseInput(const char *input);
+static void ClearArgs();
 
 #endif

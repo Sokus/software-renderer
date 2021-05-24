@@ -51,10 +51,27 @@ void Capitalise(char* src)
     }
 }
 
-bool CompareCharInsenitive(char a, char b)
+bool CompareCharInsensitive(char a, char b)
 {
     // ASCII:  A(65) - a(97) = 32
     return  a == b    ? 1 :
             a+32 == b ? 1 :
             a == b+32 ? 1 : 0;
+}
+
+bool CompareStringInsensitive(const char* srcA, const char* srcB)
+{
+    if(srcA == srcB) return true;
+    if(srcA == NULL | srcB == NULL) return false;
+
+    while(true)
+    {
+        if(!CompareCharInsensitive(*srcA, *srcB)) return false;
+        srcA++;
+        srcB++;
+        bool aEnded = *srcA == '\0';
+        bool bEnded = *srcB == '\0';
+        if(aEnded != bEnded) return false;
+        if(aEnded && bEnded) return true;
+    }
 }
