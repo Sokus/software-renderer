@@ -25,23 +25,25 @@ void CreateObjects()
 
     Object* pouch = (Object*)malloc(sizeof(Object));
     *pouch = (Object) {0, {Copy("pouch"), Copy("leather pouch")}, Copy("a leather pouch"), Copy("It's a leather pouch.")};
-    SetProperty(pouch, OBJECT_PROPERTY_VISIBLE_INVENTORY);
-    SetProperty(pouch, OBJECT_PROPERTY_COLLECTABLE);
+    SetProperty(&pouch->properties, OBJECT_PROPERTY_COLLECTABLE);
+    SetProperty(&pouch->properties, OBJECT_PROPERTY_CONTAINER);
+    SetProperty(&pouch->properties, OBJECT_PROPERTY_VISIBLE_INVENTORY);
     AppendInventory(field, pouch);
 
     Object* coin = (Object*)malloc(sizeof(Object));
     *coin = (Object) {0, {Copy("coin"), Copy("silver coin")}, Copy("a silver coin"), Copy("It's a coin made of silver.")};
-    SetProperty(coin, OBJECT_PROPERTY_COLLECTABLE);
+    SetProperty(&coin->properties, OBJECT_PROPERTY_COLLECTABLE);
     AppendInventory(pouch, coin);
     
     Object* chest = (Object*)malloc(sizeof(Object));
     *chest = (Object) {0, {Copy("chest"), Copy("wooden chest")}, Copy("a wooden chest"), Copy("It's a chest made of wood.")};
-    SetProperty(chest, OBJECT_PROPERTY_VISIBLE_INVENTORY);
+    SetProperty(&chest->properties, OBJECT_PROPERTY_CONTAINER);
+    SetProperty(&chest->properties, OBJECT_PROPERTY_VISIBLE_INVENTORY);
     AppendInventory(field, chest);
     
     Object* sword = (Object*)malloc(sizeof(Object));
     *sword = (Object) {0, {Copy("sword"), Copy("iron sword")}, Copy("an iron sword"), Copy("It's an iron sword, its blade is dull.")};
-    SetProperty(sword, OBJECT_PROPERTY_COLLECTABLE);
+    SetProperty(&sword->properties, OBJECT_PROPERTY_COLLECTABLE);
     AppendInventory(chest, sword);
 }
 

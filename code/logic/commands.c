@@ -102,7 +102,7 @@ bool ExecuteLookInside(Object* args[])
     Object* objA = args[0];
     if(objA)
     {
-        if( !HasProperty(objA, OBJECT_PROPERTY_VISIBLE_INVENTORY) )
+        if( !HasProperty(objA->properties, OBJECT_PROPERTY_VISIBLE_INVENTORY) )
         {
             printf("You can't look into %s.\n", objA->description);
         }
@@ -142,7 +142,7 @@ bool ExecutePickUp(Object *args[])
     Object *objA = args[0];
     if(objA)
     {
-        if( HasProperty(objA, OBJECT_PROPERTY_COLLECTABLE) )
+        if( HasProperty(objA->properties, OBJECT_PROPERTY_COLLECTABLE) )
         {
             RemoveFromInventory(objA);
             AppendInventory(gpPlayer, objA);
@@ -164,7 +164,7 @@ bool ExecuteDrop(Object *args[])
     Object *objA = args[0];
     if(objA)
     {
-        if( HasProperty(objA, OBJECT_PROPERTY_COLLECTABLE) )
+        if( HasProperty(objA->properties, OBJECT_PROPERTY_COLLECTABLE) )
         {
             DropItem(objA);
             printf("You dropped %s.\n", objA->description);
@@ -199,9 +199,25 @@ bool ExecutePut(Object* args[])
                     objB->description, objA->description);
             return true;
         }
+        
+        bool A_isCollectable = HasProperty(objA->properties, OBJECT_PROPERTY_COLLECTABLE);
+        bool B_isContainer = HasProperty(objB->properties, OBJECT_PROPERTY_CONTAINER );
 
-        if( HasProperty(objA, OBJECT_PROPERTY_COLLECTABLE)
-            && HasProperty(objB, OBJECT_PROPERTY_VISIBLE_INVENTORY ))
+        if( !A_isCollectable )
+        {
+            printf("You can't pick up %s.\n", objA->description);
+            return true;
+        }
+
+        if( !B_isContainer )
+        {
+            char* description = Copy(objB->description);
+            Capitalise(description);
+            printf("%s isn't a container.\n", description);
+            free(description);
+        }
+
+        if(A_isCollectable && B_isContainer)
         {
             printf("You placed %s in %s.\n", objA->description, objB->description);
             RemoveFromInventory(objA);

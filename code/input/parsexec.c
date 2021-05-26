@@ -27,7 +27,7 @@ bool ParseInput(const char *input)
     return true;
 }
 
-static bool MatchCommand(const char* src, const Command* cmd)
+static bool MatchCommand(const char* src, const Command cmd[])
 {
     for(int i=0; i<COMMANDS_MAX_PATTERNS; i++)
     {
@@ -134,7 +134,7 @@ static Object* FindByTagRecursive(const char* src, Object* head,
             match = pObj;
         }
 
-        if(deepSearch && HasProperty(pObj, OBJECT_PROPERTY_VISIBLE_INVENTORY))
+        if(deepSearch && HasProperty(pObj->properties, OBJECT_PROPERTY_VISIBLE_INVENTORY))
         {
             Object* possibleMatch = FindByTagRecursive(src, pObj->inventoryHead, minTagLength, true);
             if(possibleMatch != NULL) match = possibleMatch;

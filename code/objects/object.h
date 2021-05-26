@@ -5,16 +5,16 @@
 #include <stdio.h>
 
 #include "../types.h"
-#include "properties.h"
+#include "../properties.h"
 #include "../utility/strops.h"
 
 #define OBJECT_MAX_TAGS 8
 
 struct Object
 {
-    unsigned long long properties;
+    PropertyField properties;
 
-    char* tags[OBJECT_MAX_TAGS]; // tags you refer to the object by
+    char* tags[OBJECT_MAX_TAGS];
     char* description;
     char* details;
 
