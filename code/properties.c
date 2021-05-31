@@ -1,16 +1,12 @@
 #include "properties.h"
 
-bool HasProperty(PropertyField properties, ObjectProperty property)
+bool HasProperty(PropertyField properties, Property property)
 {
     return properties & (1ULL << property);
 }
 
-void SetProperty(PropertyField* properties, ObjectProperty property)
+void SetProperty(PropertyField* properties, Property property, bool value)
 {
-    *properties |= (1ULL << property);
-}
-
-void RemoveProperty(PropertyField* properties, ObjectProperty property)
-{
-    *properties &= ~(1ULL << property);
+    if(value) *properties |= (1ULL << property);
+    else *properties &= ~(1ULL << property);
 }

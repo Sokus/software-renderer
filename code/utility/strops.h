@@ -4,13 +4,23 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-int GetLength(const char *src);
-char* SkipSpaces(const char *src);
 bool IsUpper(char letter);
 bool IsLetter(char letter);
-char* Copy(char* src); 
-void Capitalise(char* src);
+bool IsNumber(char letter);
 bool CompareCharInsensitive(char a, char b);
-bool CompareStringInsensitive(const char* srcA, const char* srcB);
+bool CompareStringInsensitive(char* srcA, char* srcB);
+bool StartsWith(char* srcA, char* srcB);
+int GetLength(char *src);
+
+char* SkipSpaces(char *src);
+
+char* AddArticle(char* src);
+void RemovePadding(char** pSrc);
+void RemoveDoubleSpaces(char** pSrc);
+char* Capitalise(char* src);
+
+char* Copy(char* src);
+
+char* GetLongestFromArray(char* arr[], int n);
 
 #endif

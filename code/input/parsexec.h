@@ -5,28 +5,41 @@
 #include <stdlib.h>
 #include <stdbool.h>
 
-#include "../logic/commands.h"
+#include "argument.h"
+#include "command.h"
+#include "commands.h"
 #include "../objects/object.h"
-#include "../properties.h"
-#include "../utility/strops.h"
+
+#define ARGS_MAX_COUNT 10
 
 extern Object* gpObjectRoot;
 extern Object* gpPlayer; 
 
-static Object* gArgs[26];
+typedef struct
+{
+    int minTagLength;
+    int matchesToSkip;
+    Distance minDistance;
+    Distance maxDistance;
+} SearchParameters;
 
-bool ParseInput(const char *input);
-static bool MatchCommand(const char* src, const Command cmd[]);
-static bool MatchPattern(const char* src, const char* pattern,
-                        Distance minDistance, Distance maxDistance);
-static Object* FindByTag(const char* src, int* minTagLength,
-                         Distance minDistance, Distance maxDistance);
-static Object* FindByTagRecursive(const char* src, Object* head,
-                                  int* minTagLength, bool deepSearch);
-static bool MatchObjectTag(const char* src, const Object* obj, int* minTagLength);
-static bool CompareWithTag(const char* src, const char* tag);
+static Argument gArgs[ARGS_MAX_COUNT];
+
+Argument GetArgumentOfType(ArgType argType, int skip);
+static void ClearArgs();
+
+bool ParseInput(char* input);
+static bool MatchCommand(char* src, Command cmd[]);
+static bool MatchPattern(char* src, char* pattern, SearchParameters params);
+static ArgType EvaluateType(char type);
+static int ReadArgumentInt(char* src, int* value);
+static int ReadArgumentOrdinal(char* src, int* value);
+static int ReadArgumentTag(char* src, void** value, SearchParameters* params);
+
+static Object* FindByTag(char* src, SearchParameters* params);
+static Object* FindByTagRecursive(char* src, Object* head, SearchParameters* params, bool deepSearch);
+static bool MatchObjectTag(char* src, Object* obj, SearchParameters* params);
 
 void GetInput(char** buffer);
-static void ClearArgs();
 
 #endif

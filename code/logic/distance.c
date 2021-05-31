@@ -1,5 +1,6 @@
 #include "distance.h"
 
+/*
 Distance GetDistance(const Object* from, const Object* to)
 {
     if(from == to) return DISTANCE_SELF;
@@ -17,6 +18,7 @@ Distance GetDistance(const Object* from, const Object* to)
 
     return DISTANCE_ABSENT;
 }
+*/
 
 int GetDepth(const Object* container, const Object* obj)
 {

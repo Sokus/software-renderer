@@ -16,7 +16,7 @@ typedef enum
     DISTANCE_ABSENT
 } Distance;
 
-Distance GetDistance(const Object* from, const Object* to);
+// Distance GetDistance(const Object* from, const Object* to);
 int GetDepth(const Object* container, const Object* obj);
 bool IsInRange(Distance value, Distance from, Distance to);
 
