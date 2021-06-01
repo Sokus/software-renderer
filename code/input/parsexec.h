@@ -8,7 +8,7 @@
 #include "argument.h"
 #include "command.h"
 #include "commands.h"
-#include "../objects/object.h"
+#include "objects/object.h"
 
 #define ARGS_MAX_COUNT 10
 

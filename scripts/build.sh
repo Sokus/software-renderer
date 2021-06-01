@@ -5,7 +5,7 @@ fi
 mkdir build
 pushd ./build
 
-gcc ../code/input/*.c ../code/logic/*.c ../code/objects/*.c ../code/output/*_LINUX.c ../code/utility/*.c ../code/*.c -o summoned
+gcc ../code/input/*.c ../code/logic/*.c ../code/objects/*.c ../code/output/*_LINUX.c ../code/utility/*.c ../code/*.c -o summoned -I../code
 
 popd
 popd

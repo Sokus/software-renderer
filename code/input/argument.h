@@ -1,7 +1,7 @@
 #ifndef ARGUMENT_H
 #define ARGUMENT_H
 
-#include "../objects/object.h"
+#include "objects/object.h"
 
 typedef enum
 {

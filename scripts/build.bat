@@ -11,6 +11,6 @@ set files=..\code\*.c ^
 ..\code\objects\*.c ^
 ..\code\output\*_WIN32.c ^
 ..\code\utility\*.c
-gcc %files% -o summoned
+gcc %files% -o summoned -I..\code
 
 popd

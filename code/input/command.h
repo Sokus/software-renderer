@@ -5,7 +5,7 @@
 #define COMMANDS_MAX_PATTERNS 8
 
 #include "argument.h"
-#include "../logic/distance.h"
+#include "logic/distance.h"
 
 typedef struct Command Command;
 struct Command

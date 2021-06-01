@@ -4,8 +4,8 @@
 #include <stdlib.h>
 #include <stdio.h>
 
-#include "../properties.h"
-#include "../utility/strops.h"
+#include "properties.h"
+#include "utility/strops.h"
 
 #define OBJECT_MAX_TAGS 8
 

@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include "../objects/object.h"
+#include "objects/object.h"
 
 typedef enum
 {
