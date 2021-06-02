@@ -31,6 +31,7 @@ static void ClearArgs();
 bool ParseInput(char* input);
 static bool MatchCommand(char* src, Command cmd[]);
 static bool MatchPattern(char* src, char* pattern, SearchParameters params);
+
 static ArgType EvaluateType(char type);
 static int ReadArgumentInt(char* src, int* value);
 static int ReadArgumentOrdinal(char* src, int* value);

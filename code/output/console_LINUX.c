@@ -14,8 +14,8 @@ void Console_Print(const char* message, Console_Color color)
     {
         bool bright = color >= COLOR_BRIGHT_BLACK;
         int attribute = (color % 8) + 30;
-        char * format = bright ? "\x001b[%d;1m%s\u001b[0m" :
-                                "\x001b[%dm%s\u001b[0m";
+        char * format = bright ? "\x001b[%d;1m%s\x1B[0m" :
+                                "\x001b[%dm%s\x1B[0m";
         printf(format, attribute, message);
     }
 }

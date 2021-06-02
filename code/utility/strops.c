@@ -19,9 +19,10 @@ bool IsNumber(char letter)
 bool CompareCharInsensitive(char a, char b)
 {
     // ASCII:  A(65) - a(97) = 32
-    return  a == b    ? 1 :
-            a+32 == b ? 1 :
-            a == b+32 ? 1 : 0;
+    if(a == b) return true;
+    if(IsUpper(a)) a += 32;
+    if(IsUpper(b)) b += 32;
+    return a == b;
 }
 
 bool CompareStringInsensitive(char* srcA, char* srcB)
@@ -29,7 +30,7 @@ bool CompareStringInsensitive(char* srcA, char* srcB)
     if(srcA == srcB) return true;
     if(srcA || srcB) return false;
 
-    while(true)
+    while(1)
     {
         if(!CompareCharInsensitive(*srcA, *srcB)) return false;
         srcA++;
@@ -148,14 +149,7 @@ void RemoveDoubleSpaces(char** pSrc)
     while(*other != '\0')
     {
         *src = *other;
-        if(*other == ' ')
-        {
-            other = SkipSpaces(other);
-        }
-        else
-        {
-            other++;
-        }
+        other = SkipSpaces(other);
         src++;
     }
     *src = '\0';
