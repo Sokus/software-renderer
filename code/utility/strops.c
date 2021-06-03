@@ -1,19 +1,19 @@
 #include "strops.h"
 
-bool IsUpper(char letter)
+bool IsUpper(char src)
 {
-    return letter >= 'A' && letter <= 'Z';
+    return src >= 'A' && src <= 'Z';
 }
 
-bool IsLetter(char letter)
+bool IsLetter(char src)
 {
-    return letter >= 'A' && letter <= 'Z'
-        || letter >= 'a' && letter <= 'z';
+    return src >= 'A' && src <= 'Z'
+        || src >= 'a' && src <= 'z';
 }
 
-bool IsNumber(char letter)
+bool IsNumber(char src)
 {
-    return letter >= '0' && letter <= '9';
+    return src >= '0' && src <= '9';
 }
 
 bool CompareCharInsensitive(char a, char b)
@@ -28,7 +28,7 @@ bool CompareCharInsensitive(char a, char b)
 bool CompareStringInsensitive(char* srcA, char* srcB)
 {
     if(srcA == srcB) return true;
-    if(srcA || srcB) return false;
+    if(!srcA || !srcB) return false;
 
     while(1)
     {
@@ -73,16 +73,15 @@ int GetLength(char* src)
 
 char* SkipSpaces(char* src)
 {
-    while(*src == ' ')
-    {
-        src++;
-    }
-    return (char*)src;
+    while(*src == ' ') src++;
+    return src;
 }
 
-char* AddArticle(char* src)
+void AddArticle(char** pSrc)
 {   
-    if(!src || !IsLetter(*src)) return src;
+    if(!pSrc) return;
+    char* src = *pSrc;
+    if(!src || !IsLetter(*src)) return;
     //                     a  b  c  d  e  f  g  j  i  j  k  l  m  n  o  p  q  r  s  t  u  w  x  y  z
     bool whereToPutAn[] = {1, 0, 0, 0, 1, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 0, 0, 0, 1, 0, 0, 1, 0};
     int arrSize = sizeof(whereToPutAn)/sizeof(bool);
@@ -108,16 +107,20 @@ char* AddArticle(char* src)
     }
     newSrc[newLength] = '\0';
     free(src);
-    return newSrc;
+    *pSrc = newSrc;
 }
 
 void RemovePadding(char** pSrc)
 {
+    if(!pSrc) return;
+    char* src = *pSrc;
+    if(!src) return;
+
     bool anyLettersFound = false;
     int index=0, start=0, end=0;
-    while(*(*pSrc+index) != '\0')
+    while(*(src+index) != '\0')
     {
-        if(*(*pSrc+index) != ' ')
+        if(*(src+index) != ' ')
         {
             if(!anyLettersFound)
             {
@@ -128,31 +131,35 @@ void RemovePadding(char** pSrc)
         }
         index++;
     }
+
     int newLength = end-start+1;
     if(newLength < index-1)
     {
         char* newSrc = (char*)malloc(sizeof(char)*(newLength+1));
         for(int i=0; i<newLength; i++)
         {
-            newSrc[i] = (*pSrc)[start+i];
+            newSrc[i] = src[start+i];
         }
         newSrc[newLength] = '\0';
-        free(*pSrc);
+        free(src);
         *pSrc = newSrc;
     }
 }
 
 void RemoveDoubleSpaces(char** pSrc)
 {
+    if(!pSrc) return;
     char* src = *pSrc;
-    char* other = *pSrc;
+    if(!src) return;
+    char* other = src;
     while(*other != '\0')
     {
         *src = *other;
-        other = SkipSpaces(other);
+        if(*other == ' ') other = SkipSpaces(other);
+        else other++;
         src++;
     }
-    *src = '\0';
+
     int newLength = src - *pSrc;
     char* newSrc = (char*)malloc(sizeof(char)*(newLength+1));
     for(int i=0; i<newLength; i++)
@@ -164,14 +171,13 @@ void RemoveDoubleSpaces(char** pSrc)
     *pSrc = newSrc;
 }
 
-char* Capitalise(char* src)
+void Capitalise(char** pSrc)
 {
+    if(!pSrc) return;
+    char* src = *pSrc;
+    if(!src) return;
     src = SkipSpaces(src);
-    if(IsLetter(*src) && !IsUpper(*src))
-    {
-        *src -= 32;
-    }
-    return src;
+    if(IsLetter(*src) && !IsUpper(*src)) *src -= 32;
 }
 
 char* Copy(char* src)
@@ -187,6 +193,7 @@ char* Copy(char* src)
 
 char* GetLongestFromArray(char* arr[], int n)
 {
+    if(!arr) return NULL;
     char* longestTag = NULL;
     int maxLength = 0;
     for(int i=0; i<n; i++)

@@ -16,7 +16,7 @@ bool ExecuteLookAround(Argument args[])
         if(pObj != gpPlayer)
         {
             char* tag = Copy(pObj->tags[0]);
-            tag = AddArticle(tag);
+            AddArticle(&tag);
             printf("%s\n", tag);
             free(tag);
         }
@@ -60,13 +60,17 @@ bool ExecutePickUp(Argument args[])
         {
             RemoveFromInventory(obj);
             AppendInventory(gpPlayer, obj);
-            char* tag = AddArticle(Copy(GetLongestFromArray(obj->tags, OBJECT_MAX_TAGS)));
+            char* tag = Copy(GetLongestFromArray(obj->tags, OBJECT_MAX_TAGS));
+            AddArticle(&tag);
+
             printf("You got %s.\n", tag);
             free(tag);
         }
         else
         {
-            char* tag = Capitalise(AddArticle(Copy(GetLongestFromArray(obj->tags, OBJECT_MAX_TAGS))));
+            char* tag = Copy(GetLongestFromArray(obj->tags, OBJECT_MAX_TAGS));
+            AddArticle(&tag);
+            Capitalise(&tag);
             printf("%s can't be picked up.\n", tag);
             free(tag);
         }
@@ -83,13 +87,16 @@ bool ExecuteDrop(Argument args[])
         if( HasProperty(obj->properties, OBJECT_PROPERTY_COLLECTABLE) )
         {
             DropItem(obj);
-            char* tag = AddArticle(Copy(GetLongestFromArray(obj->tags, OBJECT_MAX_TAGS)));
+            char* tag = Copy(GetLongestFromArray(obj->tags, OBJECT_MAX_TAGS));
+            AddArticle(&tag);
             printf("You dropped %s.\n", tag);
             free(tag);
         }
         else
         {
-            char* tag = Capitalise(AddArticle(Copy(GetLongestFromArray(obj->tags, OBJECT_MAX_TAGS))));
+            char* tag = Copy(GetLongestFromArray(obj->tags, OBJECT_MAX_TAGS));
+            AddArticle(&tag);
+            Capitalise(&tag);
             printf("%s can't be dropped.\n", tag);
             free(tag);
         }
@@ -111,7 +118,8 @@ bool ExecutePut(Argument args[])
     if(objA == objB)
     {
         possible = false;
-        char* articledA = AddArticle(Copy(tagA));
+        char* articledA = Copy(tagA);
+        AddArticle(&articledA);
         printf("You can't put %s in itself.\n", articledA);
         free(articledA);
     }
@@ -127,7 +135,7 @@ bool ExecutePut(Argument args[])
     if(depth == 1)
     {
         possible = false;
-        printf("The %s in already contained in the %s.\n", tagA, tagB);
+        printf("The %s is already contained in the %s.\n", tagA, tagB);
     }
         
     bool A_isCollectable = HasProperty(objA->properties, OBJECT_PROPERTY_COLLECTABLE);
@@ -143,7 +151,9 @@ bool ExecutePut(Argument args[])
     if( !B_isContainer )
     {
         possible = false;
-        char* capArtB = Capitalise(AddArticle(Copy(tagB)));
+        char* capArtB = Copy(tagB);
+        AddArticle(&capArtB);
+        Capitalise(&capArtB);
         printf("%s isn't a container.\n", capArtB);
         free(capArtB);
 

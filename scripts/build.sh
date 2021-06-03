@@ -1,6 +1,6 @@
 pushd ../
 if [ -d "build" ]; then
-    rmdir build
+    rmdir --ignore-fail-on-non-empty build
 fi
 mkdir build
 pushd ./build

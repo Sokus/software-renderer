@@ -305,23 +305,28 @@ static bool MatchObjectTag(char* src, Object* obj, SearchParameters* params)
     return result;
 }
 
-void GetInput(char** buffer)
+void GetInput(char** pBuffer)
 {
+    if(!pBuffer) return;
+    char* buffer = *pBuffer;
+    if(!buffer) return;
+
     int INPUT_SIZE = 255;
-    free(*buffer);
-    *buffer = (char*)malloc(sizeof(char)*INPUT_SIZE);
+    free(buffer);
+    buffer = (char*)malloc(sizeof(char)*INPUT_SIZE);
 
     char input;
-    int characters_read = 0;
+    int index = 0;
     
     while(input=getc(stdin), input != '\n')
     {
-        if(characters_read < INPUT_SIZE)
+        if(index < INPUT_SIZE)
         {
-            (*buffer)[characters_read] = input;
+            buffer[index] = input;
         }
-        characters_read++;
+        index++;
     }
-    int end_offset = characters_read < INPUT_SIZE ? characters_read : INPUT_SIZE - 1;
-    *((*buffer) + end_offset) = '\0';
+    int end = index < INPUT_SIZE ? index : INPUT_SIZE - 1;
+    buffer[end] = '\0';
+    *pBuffer = buffer;
 }

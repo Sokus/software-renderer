@@ -14,10 +14,10 @@ int GetLength(char *src);
 
 char* SkipSpaces(char *src);
 
-char* AddArticle(char* src);
+void AddArticle(char** pSrc);
 void RemovePadding(char** pSrc);
 void RemoveDoubleSpaces(char** pSrc);
-char* Capitalise(char* src);
+void Capitalise(char** pSrc);
 
 char* Copy(char* src);
 

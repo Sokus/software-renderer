@@ -1,7 +1,7 @@
 @echo off
 
 set buildDir=%~dp0..\build
-if exist %buildDir% rmdir %buildDir%
+if exist %buildDir% rmdir %buildDir% /s /q
 mkdir %buildDir%
 pushd %buildDir%
 
