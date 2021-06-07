@@ -12,7 +12,8 @@ void Console_SetActiveColor(Console_Color color)
 
     bool bright = color >= COLOR_BRIGHT_BLACK;
     int attribute = (color % 8) + 30;
-    char * format = bright ? "\x001b[%d;1m" : "\x001b[%dm";
+    char * format = bright ? "\e[%d;1m" : "\e[%dm";
+    printf("\e[0m");
     printf(format, attribute);
 }
 
@@ -44,5 +45,5 @@ void Console_Print(char* message, ...)
 
 void Console_Clear()
 {
-    printf("\033[H\033[J");
+    printf("\e[H\e[J");
 }
