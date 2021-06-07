@@ -23,14 +23,14 @@ void CreateCommands()
                                         { Copy("close the inventory") },
                                         Copy("close the inventory"),
                                         NULL,
-                                        ExecuteClose };
+                                        ExecuteCloseInventory };
     SetProperty(&gCommands[index].contextConditions, CONTEXT_INVENTORY_OPEN, true);
                                         
     gCommands[++index] = (Command) {    0,
                                         { Copy("close the $0t55") },
                                         Copy("close the <container>"),
                                         NULL,
-                                        ExecuteClose };
+                                        ExecuteCloseContainer };
     SetProperty(&gCommands[index].contextConditions, CONTEXT_CONTAINER_OPEN, true);
 
     gCommands[++index] = (Command) {    0,
