@@ -134,7 +134,7 @@ bool ExecuteContainerPage()
         int page = 0;
         Argument argI = GetArgumentOfType(ARG_TYPE_INT, 0);
         Argument argO = GetArgumentOfType(ARG_TYPE_ORDINAL, 0);
-        if(argI.type == ARG_TYPE_INT) page = argI.value;
+        if(argI.type == ARG_TYPE_INT) page = argI.value - 1;
         if(argO.type == ARG_TYPE_ORDINAL) page = argO.value;
         gpPlayer->target->inventory = SetListPage(gpPlayer->target->inventory, page);
         return true;
