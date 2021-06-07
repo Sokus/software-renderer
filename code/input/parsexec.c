@@ -2,14 +2,16 @@
 
 Argument GetArgumentOfType(ArgType argType, int skip)
 {
-    for(int i=0; i<ARGS_MAX_COUNT; i++)
+    Argument arg = {0};
+    for(int i=0; i<ARGS_MAX_COUNT && skip >= 0; i++)
     {
-        if(gArgs[i].type == argType && skip-- <= 0)
+        if(gArgs[i].type == argType) 
         {
-            return gArgs[i];
+            arg = gArgs[i];
+            skip--;
         }
     }
-    return (Argument) {0};
+    return arg;
 }
 
 static void ClearArgs()
@@ -17,7 +19,7 @@ static void ClearArgs()
     for(int i=0; i<ARGS_MAX_COUNT; i++) gArgs[i] = (Argument){0};
 }
 
-bool ParseInput(char* input)
+void ParseInput(char* input)
 {
     if(input && GetLength(input))
     {
@@ -25,13 +27,15 @@ bool ParseInput(char* input)
         RemovePadding(&src);
         RemoveDoubleSpaces(&src);
 
-        Command* commands = GetCommands();
+        Command* command = NULL;
         Command* cmd = NULL;
         for(int i=0; i<32; i++)
         {
-            if(MatchCommand(src, commands+i))
+            command = gCommands+i;
+            if(HasProperties(gContext, command->contextConditions) 
+                && MatchCommand(src, gCommands+i))
             {
-                cmd = commands+i;
+                cmd = gCommands+i;
                 break;
             }
         }
@@ -39,14 +43,24 @@ bool ParseInput(char* input)
 
         if(cmd)
         {
-            if(cmd->function) return cmd->function(gArgs);
+            if(cmd->function)
+            {
+                if(cmd->function(gArgs))
+                {
+                    Console_Clear();
+                    PrintInfo();
+                }
+            }
+            else
+            {
+                Console_Print("Command has no functionality.\n");
+            }
         }
         else
         {
-            printf("I don't know what you're trying to do.\n");
+            Console_Print("I don't know what you're trying to do.\n");
         }
     }
-    return true;
 }
 
 static bool MatchCommand(char* src, Command cmd[])
@@ -54,8 +68,6 @@ static bool MatchCommand(char* src, Command cmd[])
     SearchParameters params = {0};
     for(int i=0; i<COMMANDS_MAX_PATTERNS; i++)
     {
-        params.minDistance = cmd->minDistance;
-        params.maxDistance = cmd->maxDistance;
         if(MatchPattern(src, cmd->patterns[i], params)) return true;
     }
     return false;
@@ -93,23 +105,55 @@ static bool MatchPattern(char* src, char* pattern, SearchParameters params)
 
                 case ARG_TYPE_TAG:
                 {
+                    // get range
+                    pattern++;
+                    Distance dist = (int)(*pattern)-48;
+                    if(dist < 0 || DISTANCE_MAX <= dist) return false;
+                    params.minDistance = dist;
+                    pattern++;
+                    dist = (int)(*pattern)-48;
+                    if(dist < 0 || DISTANCE_MAX <= dist) return false;
+                    params.maxDistance = dist;
+                    
                     // do the first pass that will find the first matching item
                     // with the longest possible tag
                     params.minTagLength = 0;
                     arg.p = FindByTag(src, &params);
 
+                    
                     // check if the previous argument was of the type "ordinal"
-                    // and look through objects again, this time allow tags
-                    // of the same length as the match just found
+                    // and read the value to know how many matches to skip
+                    params.matchesToSkip = 0;
                     if(index > 0 && gArgs[index-1].type == ARG_TYPE_ORDINAL)
                     {
-                        params.matchesToSkip = gArgs[index-1].value + 1;
+                        params.matchesToSkip += gArgs[index-1].value;
+                    }
+                    
+                    if(params.matchesToSkip == 0)
+                    {
+                        // if there was no skipping intended
+                        // check if the last match could be
+                        // the same as the current one
+                        // if so, force a skip
+                        Argument last = GetArgumentOfType(ARG_TYPE_TAG, ARGS_MAX_COUNT);
+                        if(last.type != ARG_TYPE_INVALID && last.p == arg.p)
+                        {
+                            params.matchesToSkip += 1;
+                        }
+                    }
+                    
+                    // and look through objects again, this time with skips
+                    if(params.matchesToSkip > 0)
+                    {
                         Object* possibleMatch = FindByTag(src, &params);
                         if(possibleMatch) arg.p = possibleMatch;
                     }
 
                     result = params.minTagLength;
                 } break;
+
+                case ARG_TYPE_PROPERTY:
+                { result = ReadArgumentProperty(src, &arg.value); } break;
 
                 default: { } break;
             }
@@ -139,6 +183,7 @@ static ArgType EvaluateType(char type)
     return  type == 'i' ? ARG_TYPE_INT :
             type == 'o' ? ARG_TYPE_ORDINAL :
             type == 't' ? ARG_TYPE_TAG :
+            type == 'p' ? ARG_TYPE_PROPERTY :
             ARG_TYPE_INVALID;
 }
 
@@ -206,6 +251,26 @@ static int ReadArgumentOrdinal(char* src, int* value)
     return 0;
 }
 
+static int ReadArgumentProperty(char* src, int* value)
+{
+    int charactersRead = ReadArgumentInt(src, value);
+    if(charactersRead) return charactersRead;
+    else
+    {
+        int length = 0;
+        for(int i=0; i<PROPERTY_MAX; i++)
+        {
+            length = GetLength(gPropertyNames[i]);
+            if(length > charactersRead && StartsWith(src, gPropertyNames[i]))
+            {
+                charactersRead = length;
+                *value = i;
+            }
+        }
+    }
+    return charactersRead;
+}
+
 static Object* FindByTag(char* src, SearchParameters* params)
 {
     Object* match = NULL;
@@ -226,57 +291,64 @@ static Object* FindByTag(char* src, SearchParameters* params)
         }
     }
 
-    if(IsInRange(DISTANCE_INVENTORY, params->minDistance, params->maxDistance))
+    if(IsInRange(DISTANCE_INVENTORY, params->minDistance, params->maxDistance)
+        && HasProperty(gContext, CONTEXT_INVENTORY_OPEN))
     {
-        bool doDeepSearch = IsInRange(DISTANCE_INVENTORY_CONTAINED,
-                                    params->minDistance,
-                                    params->maxDistance);
-        Object* possibleMatch = FindByTagRecursive(src, gpPlayer->inventoryHead, params, doDeepSearch);
-        if(possibleMatch)
+        int objectsChecked = 0;
+        for(Object* pObj=gpPlayer->inventory;
+            pObj != NULL && objectsChecked < LIST_MAX_ROWS;
+            pObj = pObj->next)
         {
-            match = possibleMatch;
+            if(MatchObjectTag(src, pObj, params))
+            {
+                match = pObj;
+                params->matchesToSkip--;
+                objectsChecked++;
+            }
+        }
+    }
+
+    if(IsInRange(DISTANCE_TARGET, params->minDistance, params->maxDistance))
+    {
+        if(MatchObjectTag(src, gpPlayer->target, params))
+        {
+            match = gpPlayer->target;
             params->matchesToSkip--;
+        }
+    }
+
+    if(IsInRange(DISTANCE_NEAR_CONTAINED, params->minDistance, params->maxDistance)
+        && HasProperty(gContext, CONTEXT_CONTAINER_OPEN)
+        && gpPlayer->target)
+    {
+        int objectsChecked = 0;
+        for(Object* pObj=gpPlayer->target->inventory;
+            pObj != NULL && objectsChecked < LIST_MAX_ROWS;
+            pObj = pObj->next)
+        {
+            if(MatchObjectTag(src, pObj, params))
+            {
+                match = pObj;
+                params->matchesToSkip--;
+                objectsChecked++;
+            }
         }
     }
 
     if(IsInRange(DISTANCE_NEAR, params->minDistance, params->maxDistance))
     {
-        bool doDeepSearch = IsInRange(DISTANCE_NEAR_CONTAINED,
-                                    params->minDistance,
-                                    params->maxDistance);
-        Object* possibleMatch = FindByTagRecursive(src, gpPlayer->parent->inventoryHead, params, doDeepSearch);
-        if(possibleMatch)
+        for(Object* pObj=GetFirstFromList(gpPlayer->parent->inventory);
+            pObj != NULL;
+            pObj = pObj->next)
         {
-            match = possibleMatch;
-            params->matchesToSkip--;
+            if(MatchObjectTag(src, pObj, params))
+            {
+                match = pObj;
+                params->matchesToSkip--;
+            }
         }
     }
 
-    return match;
-}
-
-static Object* FindByTagRecursive(char* src, Object* head,
-                                  SearchParameters* params,
-                                  bool deepSearch)
-{
-    Object* match = NULL;
-    for(Object* pObj=head; pObj != NULL; pObj=pObj->next)
-    {
-        if(MatchObjectTag(src, pObj, params))
-        {
-            match = pObj;
-            params->matchesToSkip--;
-        }
-
-        if(deepSearch
-            && HasProperty(pObj->properties, OBJECT_PROPERTY_VISIBLE_INVENTORY)
-            && HasProperty(pObj->properties, OBJECT_PROPERTY_CONTAINER)
-            && HasProperty(pObj->properties, OBJECT_PROPERTY_OPEN))
-        {
-            Object* possibleMatch = FindByTagRecursive(src, pObj->inventoryHead, params, true);
-            if(possibleMatch) match = possibleMatch;
-        }
-    }
     return match;
 }
 
@@ -291,7 +363,7 @@ static bool MatchObjectTag(char* src, Object* obj, SearchParameters* params)
         if(tag)
         {
             int tagLength = GetLength(tag);
-            bool skipPossible = params->matchesToSkip > 0;
+            bool skipPossible = params->matchesToSkip >= 0;
             bool longEnough;
             if(skipPossible) longEnough = tagLength >= params->minTagLength;
             else longEnough = tagLength > params->minTagLength;
@@ -326,6 +398,7 @@ void GetInput(char** pBuffer)
         }
         index++;
     }
+
     int end = index < INPUT_SIZE ? index : INPUT_SIZE - 1;
     buffer[end] = '\0';
     *pBuffer = buffer;

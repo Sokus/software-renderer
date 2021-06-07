@@ -1,208 +1,374 @@
 #include "execute.h"
 
-bool ExecuteQuit(Argument args[])
-{
-    printf("Goodbye.\n");
-    return false;
-}
-
-bool ExecuteLookAround(Argument args[])
-{
-    printf("%s\n", gpPlayer->parent->description);
-    Object* pObj=gpPlayer->parent->inventoryHead;
-    if(pObj) printf("You can see:\n");
-    while(pObj)
-    {
-        if(pObj != gpPlayer)
-        {
-            char* tag = Copy(pObj->tags[0]);
-            AddArticle(&tag);
-            printf("%s\n", tag);
-            free(tag);
-        }
-        pObj = pObj->next;
-    }
-    return true;
-}
-
-bool ExecuteLookAt(Argument args[])
-{
-    Argument arg = GetArgumentOfType(ARG_TYPE_TAG, 0);
-    if(arg.type == ARG_TYPE_TAG && arg.p != NULL)
-    {
-        Object* obj = (Object*)arg.p;
-        printf("%s\n", obj->description);
-    }
-    return true;
-}
-
-bool ExecuteExamineInventory(Argument args[])
-{
-    if( !gpPlayer->inventoryHead )
-    {
-        printf("Your inventory is empty.\n");
-    }
-    else
-    {
-        printf("You have:\n");
-        ListObjects(gpPlayer->inventoryHead);
-    }
-    return true;
-}
-
-bool ExecutePickUp(Argument args[])
-{
-    Argument arg = GetArgumentOfType(ARG_TYPE_TAG, 0);
-    if(arg.type == ARG_TYPE_TAG && arg.p != NULL)
-    {
-        Object* obj = (Object*)arg.p;
-        if( HasProperty(obj->properties, OBJECT_PROPERTY_COLLECTABLE) )
-        {
-            RemoveFromInventory(obj);
-            AppendInventory(gpPlayer, obj);
-            char* tag = Copy(GetLongestFromArray(obj->tags, OBJECT_MAX_TAGS));
-            AddArticle(&tag);
-
-            printf("You got %s.\n", tag);
-            free(tag);
-        }
-        else
-        {
-            char* tag = Copy(GetLongestFromArray(obj->tags, OBJECT_MAX_TAGS));
-            AddArticle(&tag);
-            Capitalise(&tag);
-            printf("%s can't be picked up.\n", tag);
-            free(tag);
-        }
-    }
-    return true;
-}
-
-bool ExecuteDrop(Argument args[])
-{
-    Argument arg = GetArgumentOfType(ARG_TYPE_TAG, 0);
-    if(arg.type == ARG_TYPE_TAG && arg.p != NULL)
-    {
-        Object* obj = (Object*)arg.p;
-        if( HasProperty(obj->properties, OBJECT_PROPERTY_COLLECTABLE) )
-        {
-            DropItem(obj);
-            char* tag = Copy(GetLongestFromArray(obj->tags, OBJECT_MAX_TAGS));
-            AddArticle(&tag);
-            printf("You dropped %s.\n", tag);
-            free(tag);
-        }
-        else
-        {
-            char* tag = Copy(GetLongestFromArray(obj->tags, OBJECT_MAX_TAGS));
-            AddArticle(&tag);
-            Capitalise(&tag);
-            printf("%s can't be dropped.\n", tag);
-            free(tag);
-        }
-    }
-    return true;
-}
-
-bool ExecutePut(Argument args[])
-{
-    Object* objA = GetArgumentOfType(ARG_TYPE_TAG, 0).p;
-    Object* objB = GetArgumentOfType(ARG_TYPE_TAG, 1).p;
-
-    if(!objA || !objB) return true;
-
-    bool possible = true;
-
-    char* tagA = Copy(GetLongestFromArray(objA->tags, OBJECT_MAX_TAGS));
-    char* tagB = Copy(GetLongestFromArray(objB->tags, OBJECT_MAX_TAGS));
-    if(objA == objB)
-    {
-        possible = false;
-        char* articledA = Copy(tagA);
-        AddArticle(&articledA);
-        printf("You can't put %s in itself.\n", articledA);
-        free(articledA);
-    }
-
-    int depth = GetDepth(objA, objB);
-    if(depth > 0)
-    {
-        possible = false;
-        printf("The %s is already contained in the %s.\n", tagB, tagA);
-    }
-
-    depth = GetDepth(objB, objA);
-    if(depth == 1)
-    {
-        possible = false;
-        printf("The %s is already contained in the %s.\n", tagA, tagB);
-    }
-        
-    bool A_isCollectable = HasProperty(objA->properties, OBJECT_PROPERTY_COLLECTABLE);
-    bool B_isContainer = HasProperty(objB->properties, OBJECT_PROPERTY_CONTAINER);
-    bool B_isOpen = HasProperty(objB->properties, OBJECT_PROPERTY_OPEN);
-
-    if( !A_isCollectable )
-    {
-        possible = false;
-        printf("You can't pick up the %s.\n", tagA);
-    }
-
-    if( !B_isContainer )
-    {
-        possible = false;
-        char* capArtB = Copy(tagB);
-        AddArticle(&capArtB);
-        Capitalise(&capArtB);
-        printf("%s isn't a container.\n", capArtB);
-        free(capArtB);
-
-    }
-
-    if(B_isContainer && !B_isOpen)
-    {
-        possible = false;
-        printf("The %s is closed.\n", tagB);
-    }
-
-    if(possible)
-    {
-        printf("You placed the %s in the %s.\n", tagA, tagB);
-        RemoveFromInventory(objA);
-        AppendInventory(objB, objA);
-    }
-    free(tagA);
-    free(tagB);
-    return true;
-}
-
-bool ExecuteClear(Argument args[])
+bool ExecuteClear()
 {
     Console_Clear();
     return true;
 }
 
-bool ExecuteList(Argument args[])
+bool ExecuteQuit()
 {
-    Object* head = gpPlayer->parent->inventoryHead;
-    ListObjectsRecursive(head, 0);
+    Console_Print("Goodbye.\n");
+    SetProperty(&gContext, CONTEXT_SHUTDOWN, true);
+    return false;
+}
+
+bool ExecuteHelp()
+{
+    Console_PrintColored("Available commands:\n", COLOR_CYAN);
+    for(int i=0; i<COMMANDS_MAX_COUNT; i++)
+    {
+        if(gCommands[i].pattern
+            && HasProperties(gContext, gCommands[i].contextConditions))
+        {
+            Console_Print("%s ", gCommands[i].pattern);
+            if(gCommands[i].details) 
+            {
+                Console_PrintColored(gCommands[i].details, COLOR_BRIGHT_BLACK);
+            }
+            Console_Print("\n");
+        }
+    }
+    Console_PrintColored("\nDisclaimer!\nYou can put an ordinal (e.g. 'second' or '3th')\n", COLOR_BRIGHT_YELLOW);
+    Console_PrintColored("before the <name> to implicitly pick an object\n(instead of the first matching one)\n", COLOR_BRIGHT_YELLOW);
+    return false;
+}
+
+bool ExecuteLookAt()
+{
+    Argument arg = GetArgumentOfType(ARG_TYPE_TAG, 0);
+    if(arg.type == ARG_TYPE_TAG && arg.p != NULL)
+    {
+        Object* obj = (Object*)arg.p;
+        Console_Print("%s\n", obj->description);
+    }
+    return false;
+}
+
+bool ExecuteInventory()
+{
+    SetProperty(&gContext, CONTEXT_INVENTORY_OPEN, true);
+    gpPlayer->inventory = GetFirstFromList(gpPlayer->inventory);
     return true;
 }
 
-bool ExecuteOpen(Argument args[])
+bool ExecuteInventoryNext()
 {
-    Argument argA = GetArgumentOfType(ARG_TYPE_TAG, 0);
-
-    if(argA.p) Open(argA.p);
-
-    return true;
+    if(HasProperty(gContext, CONTEXT_INVENTORY_OPEN))
+    {
+        gpPlayer->inventory = MoveListPage(gpPlayer->inventory, 1);
+        return true;
+    }
+    else
+    {
+        Console_Print("You are not in your inventory.\n");
+        return false;
+    }
 }
 
-bool ExecuteClose(Argument args[])
+bool ExecuteInventoryPrev()
 {
-    Argument argA = GetArgumentOfType(ARG_TYPE_TAG, 0);
+    if(HasProperty(gContext, CONTEXT_INVENTORY_OPEN))
+    {
+        gpPlayer->inventory = MoveListPage(gpPlayer->inventory, -1);
+        return true;
+    }
+    else
+    {
+        Console_Print("You are not in your inventory.\n");
+        return false;
+    }
+}
 
-    if(argA.p) Close(argA.p);
+bool ExecuteInventoryPage()
+{
+    if(HasProperty(gContext, CONTEXT_INVENTORY_OPEN))
+    {
+        int page = 0;
+        Argument argI = GetArgumentOfType(ARG_TYPE_INT, 0);
+        Argument argO = GetArgumentOfType(ARG_TYPE_ORDINAL, 0);
+        if(argI.type == ARG_TYPE_INT) page = argI.value - 1;
+        if(argO.type == ARG_TYPE_ORDINAL) page = argO.value;
+        gpPlayer->inventory = SetListPage(gpPlayer->inventory, page);
+        return true;
+    }
+    else
+    {
+        Console_Print("You are not in your inventory.\n");
+        return false;
+    }
+}
 
-    return true;
+bool ExecuteContainerNext()
+{
+    if(HasProperty(gContext, CONTEXT_CONTAINER_OPEN))
+    {
+        gpPlayer->target->inventory = MoveListPage(gpPlayer->target->inventory, 1);
+        return true;
+    }
+    else
+    {
+        Console_Print("You are not looking into any container.\n");
+        return false;
+    }
+}
+
+bool ExecuteContainerPrev()
+{
+    if(HasProperty(gContext, CONTEXT_CONTAINER_OPEN))
+    {
+        gpPlayer->target->inventory = MoveListPage(gpPlayer->target->inventory, -1);
+        return true;
+    }
+    else
+    {
+        Console_Print("You are not looking into any container.\n");
+        return false;
+    }
+}
+
+bool ExecuteContainerPage()
+{
+    if(HasProperty(gContext, CONTEXT_CONTAINER_OPEN))
+    {
+        int page = 0;
+        Argument argI = GetArgumentOfType(ARG_TYPE_INT, 0);
+        Argument argO = GetArgumentOfType(ARG_TYPE_ORDINAL, 0);
+        if(argI.type == ARG_TYPE_INT) page = argI.value;
+        if(argO.type == ARG_TYPE_ORDINAL) page = argO.value;
+        gpPlayer->target->inventory = SetListPage(gpPlayer->target->inventory, page);
+        return true;
+    }
+    else
+    {
+        Console_Print("You are not in your inventory.\n");
+        return false;
+    }
+}
+
+
+bool ExecutePickUp()
+{
+    Object* obj = GetArgumentOfType(ARG_TYPE_TAG, 0).p;
+    if(obj)
+    {
+        if( HasProperty(obj->properties, OBJECT_PROPERTY_COLLECTABLE) )
+        {
+            RemoveFromInventory(obj);
+            AddToInventory(gpPlayer, obj);
+            SetProperty(&obj->properties, OBJECT_PROPERTY_NEW, true);
+            return true;
+        }
+        else
+        {
+            char* tag = Copy(GetLongestFromArray(obj->tags, OBJECT_MAX_TAGS));
+            AddArticle(&tag);
+            Capitalise(&tag);
+            Console_Print("%s can't be picked up.\n", tag);
+            free(tag);
+        }
+    }
+    return false;
+}
+
+bool ExecuteDrop()
+{
+    Object* obj = GetArgumentOfType(ARG_TYPE_TAG, 0).p;
+    if(obj)
+    {
+        if( HasProperty(obj->properties, OBJECT_PROPERTY_COLLECTABLE) )
+        {
+            RemoveFromInventory(obj);
+            int page = (GetListLength(gpPlayer->inventory)-1)/LIST_MAX_ROWS;
+            gpPlayer->inventory = SetListPage(gpPlayer->inventory, page);
+            AddToInventory(gpPlayer->parent, obj);
+            SetProperty(&obj->properties, OBJECT_PROPERTY_NEW, true);
+            return true;
+        }
+        else
+        {
+            char* tag = Copy(GetLongestFromArray(obj->tags, OBJECT_MAX_TAGS));
+            AddArticle(&tag);
+            Capitalise(&tag);
+            Console_Print("%s can't be dropped.\n", tag);
+            free(tag);
+        }
+    }
+    return false;
+}
+
+bool ExecuteOpen()
+{
+    Object* obj = GetArgumentOfType(ARG_TYPE_TAG, 0).p;
+
+    if(obj)
+    {
+        if( HasProperty(obj->properties, OBJECT_PROPERTY_CONTAINER) )
+        {
+            SetProperty(&gContext, CONTEXT_CONTAINER_OPEN, true);
+            gpPlayer->target = obj;
+            obj->inventory = GetFirstFromList(obj->inventory);
+            return true;
+        }
+        else
+        {
+            char* tag = Copy(GetLongestFromArray(obj->tags, OBJECT_MAX_TAGS));
+            AddArticle(&tag);
+            Capitalise(&tag);
+            Console_Print("%s can't be opened.\n", tag);
+            free(tag);
+        }
+    }
+    return false;
+}
+
+bool ExecuteMoveToInventory()
+{
+    Object* obj = GetArgumentOfType(ARG_TYPE_TAG, 0).p;
+
+    if(obj)
+    {
+        if( HasProperty(obj->properties, OBJECT_PROPERTY_COLLECTABLE) )
+        {
+            RemoveFromInventory(obj);
+            AddToInventory(gpPlayer, obj);
+            SetProperty(&obj->properties, OBJECT_PROPERTY_NEW, true);
+            return true;
+        }
+        else
+        {
+            char* tag = Copy(GetLongestFromArray(obj->tags, OBJECT_MAX_TAGS));
+            AddArticle(&tag);
+            Capitalise(&tag);
+            Console_Print("%s can't be moved.\n", tag);
+            free(tag);
+        }
+    }
+    return false;
+}
+
+bool ExecuteMoveToContainer()
+{
+    Object* obj0 = GetArgumentOfType(ARG_TYPE_TAG, 0).p;
+    Object* obj1 = GetArgumentOfType(ARG_TYPE_TAG, 1).p;
+
+    if(obj0 && obj1)
+    {
+        bool isCollectable = HasProperty(obj0->properties, OBJECT_PROPERTY_COLLECTABLE);
+        bool isContainer = HasProperty(obj1->properties, OBJECT_PROPERTY_CONTAINER);
+        if(isCollectable && isContainer)
+        {
+            RemoveFromInventory(obj0);
+            int page = (GetListLength(gpPlayer->inventory)-1)/LIST_MAX_ROWS;
+            gpPlayer->inventory = SetListPage(gpPlayer->inventory, page);
+            AddToInventory(obj1, obj0);
+            SetProperty(&obj0->properties, OBJECT_PROPERTY_NEW, true);
+            return true;
+        }
+        
+        if(!isCollectable)
+        {
+            char* tag = Copy(GetLongestFromArray(obj0->tags, OBJECT_MAX_TAGS));
+            AddArticle(&tag);
+            Capitalise(&tag);
+            Console_Print("%s can't be moved.\n", tag);
+            free(tag);
+        }
+        
+        if(!isContainer)
+        {
+            char* tag = Copy(GetLongestFromArray(obj0->tags, OBJECT_MAX_TAGS));
+            AddArticle(&tag);
+            Capitalise(&tag);
+            Console_Print("%s isn't a container.\n", tag);
+            free(tag);
+        }
+    }
+    return false;
+}
+
+bool ExecuteClose()
+{
+    if(HasProperty(gContext, CONTEXT_CONTAINER_OPEN))
+        return ExecuteCloseContainer();
+    else if(HasProperty(gContext, CONTEXT_INVENTORY_OPEN))
+        return ExecuteCloseInventory();
+    return false;
+}
+
+bool ExecuteCloseInventory()
+{
+    if(HasProperty(gContext, CONTEXT_INVENTORY_OPEN))
+    {
+        SetProperty(&gContext, CONTEXT_INVENTORY_OPEN, false);
+        return true;
+    }
+}
+
+bool ExecuteCloseContainer()
+{
+    if(HasProperty(gContext, CONTEXT_CONTAINER_OPEN))
+    {   
+        Object* parent = gpPlayer->target->parent;
+        if(HasProperty(parent->properties, OBJECT_PROPERTY_CONTAINER)
+            && parent != gpPlayer
+            && parent != gpPlayer->parent)
+        {
+            gpPlayer->target = parent;
+            return true;
+        }
+        else
+        {
+            SetProperty(&gContext, CONTEXT_CONTAINER_OPEN, false);
+            gpPlayer->target = NULL;
+            return true;
+        }
+    }
+    return false;
+}
+bool ExecuteDebug()
+{   
+    bool debug = HasProperty(gContext, CONTEXT_DEBUG_MODE);
+    SetProperty(&gContext, CONTEXT_DEBUG_MODE, !debug);
+    if(!debug)
+        Console_PrintColored("Debug mode enabled.\n", COLOR_BRIGHT_RED);
+    else
+        Console_PrintColored("Debug mode disabled.\n", COLOR_BRIGHT_RED);
+    return false;
+}
+
+bool ExecuteListProperties()
+{
+    Object* obj = GetArgumentOfType(ARG_TYPE_TAG, 0).p;
+    if(obj)
+    {
+        char* tag = GetLongestFromArray(obj->tags, OBJECT_MAX_TAGS);
+        Console_Print("Properties of the %s:\n", tag);
+        PrintProperties(obj->properties);
+    }
+    return false;
+}
+
+bool ExecuteSetProperty()
+{
+    Object* obj = GetArgumentOfType(ARG_TYPE_TAG, 0).p;
+    Property property = GetArgumentOfType(ARG_TYPE_PROPERTY, 0).value;
+    bool value = GetArgumentOfType(ARG_TYPE_INT, 0).value != 0;
+    if(obj)
+    {
+        bool currentValue = HasProperty(obj->properties, property);
+        if(value == currentValue)
+        {
+            Console_Print("Property ");
+            PrintPropertyName(property);
+            Console_Print(" is already set to %d.\n", value);
+            return false;
+        }
+        else
+        {
+            SetProperty(&obj->properties, property, value);
+            return true;
+        }
+    }
+    return false;
 }

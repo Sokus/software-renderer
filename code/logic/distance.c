@@ -20,10 +20,12 @@ Distance GetDistance(const Object* from, const Object* to)
 }
 */
 
-int GetDepth(const Object* container, const Object* obj)
+int GetDepth(Object* container, Object* obj)
 {
     int value;
-    for(Object* inv=container->inventoryHead; inv != NULL; inv = inv->next)
+    for(Object* inv=GetFirstFromList(container->inventory);
+        inv != NULL;
+        inv = inv->next)
     {
         if(inv == obj) return 1;
         value = GetDepth(inv, obj);

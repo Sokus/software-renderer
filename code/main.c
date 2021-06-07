@@ -1,23 +1,30 @@
-#include <stdio.h>
-#include <stdlib.h>
-
 #include "input/parsexec.h"
 #include "objects/object.h"
 #include "output/console.h"
 
+PropertyField gContext;
+
 int main()
 {
     CreateObjects();
-    char* buffer = Copy("list");
+    CreateCommands();
+    Console_SetDefaultColor(COLOR_WHITE);
+    Console_ResetColor();
+    char* buffer = Copy("");
+    PrintInfo();
     while(true)
     {
-        if( !ParseInput(buffer)) break;
-
-        printf("> ");
+        ParseInput(buffer);
+        if(HasProperty(gContext, CONTEXT_SHUTDOWN)) break;
+        
+        Console_SetActiveColor(COLOR_BRIGHT_WHITE);
+        Console_Print("> ");
         GetInput(&buffer);
+        Console_ResetColor();
     }
     DeleteObjects();
-    printf("Press enter to continue...\n");
+    DeleteCommands();
+    Console_Print("Press enter to continue...\n");
     getc(stdin);
     return 0;
 }

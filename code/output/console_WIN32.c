@@ -1,32 +1,57 @@
 #include "console.h"
 #include <windows.h>
 
-void Console_Print(const char* message, Console_Color color)
+void Console_SetDefaultColor(Console_Color color)
 {
+    defaultColor = color;
+}
+
+void Console_SetActiveColor(Console_Color color)
+{
+    activeColor = color;
     int attribute;
-    if(color == COLOR_DEFAULT)
-    {
-        attribute = 15;
-    }
-    else
-    {
-        bool bright = color >= COLOR_BRIGHT_BLACK;
-        color = (Console_Color)((int)color % 8);
-        attribute = color == COLOR_BLACK   ? 0 :
-                    color == COLOR_BLUE    ? 1 :
-                    color == COLOR_GREEN   ? 2 :
-                    color == COLOR_CYAN    ? 3 :
-                    color == COLOR_RED     ? 4 :
-                    color == COLOR_MAGENTA ? 5 :
-                    color == COLOR_YELLOW  ? 6 :
-                    color == COLOR_WHITE   ? 7 : -1;
-        if(bright) attribute += 8;
-    }
+    if(color == COLOR_DEFAULT) color = defaultColor;
+    
+    bool bright = color >= COLOR_BRIGHT_BLACK;
+    color = (Console_Color)((int)color % 8);
+    attribute = color == COLOR_BLACK   ? 0 :
+                color == COLOR_BLUE    ? 1 :
+                color == COLOR_GREEN   ? 2 :
+                color == COLOR_CYAN    ? 3 :
+                color == COLOR_RED     ? 4 :
+                color == COLOR_MAGENTA ? 5 :
+                color == COLOR_YELLOW  ? 6 :
+                color == COLOR_WHITE   ? 7 : -1;
+    if(bright) attribute += 8;
 
     HANDLE hConsole = GetStdHandle(STD_OUTPUT_HANDLE);
     SetConsoleTextAttribute(hConsole, attribute);
-    printf(message);
-    SetConsoleTextAttribute(hConsole, 15);
+}
+
+void Console_ResetColor()
+{
+    Console_SetActiveColor(defaultColor);
+}
+
+void Console_PrintColored(char* message, Console_Color color, ...)
+{
+    Console_Color oldColor = activeColor;
+    Console_SetActiveColor(color);
+    
+    va_list argList;
+    va_start(argList, color);
+    vprintf(message, argList);
+    va_end(argList);
+
+    Console_SetActiveColor(oldColor);
+}
+
+void Console_Print(char* message, ...)
+{
+    va_list argList;
+    va_start(argList, message);
+    vprintf(message, argList);
+    va_end(argList);
 }
 
 void Console_Clear()

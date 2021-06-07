@@ -6,14 +6,16 @@
 
 #include "argument.h"
 #include "logic/distance.h"
+#include "properties.h"
 
 typedef struct Command Command;
 struct Command
 {
+    PropertyField contextConditions;
     char* patterns[COMMANDS_MAX_PATTERNS];
-    Distance minDistance;
-    Distance maxDistance;
-    bool (*function)(Argument args[]);
+    char* pattern;
+    char* details;
+    bool (*function)();
 };
 
 #endif

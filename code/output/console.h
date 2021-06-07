@@ -3,8 +3,9 @@
 
 #include <stdio.h>
 #include <stdbool.h>
+#include <stdarg.h>
 
-typedef enum
+typedef enum Console_Color
 {
     COLOR_BLACK,
     COLOR_RED,
@@ -25,7 +26,14 @@ typedef enum
     COLOR_DEFAULT
 } Console_Color;
 
-void Console_Print(const char* message, Console_Color color);
+static Console_Color defaultColor;
+static Console_Color activeColor;
+
+void Console_SetDefaultColor(Console_Color color);
+void Console_SetActiveColor(Console_Color color);
+void Console_ResetColor();
+void Console_PrintColored(char* message, Console_Color color, ...);
+void Console_Print(char* message, ...);
 void Console_Clear();
 
 #endif

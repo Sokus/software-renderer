@@ -9,6 +9,7 @@ typedef enum
     ARG_TYPE_INT,
     ARG_TYPE_ORDINAL,
     ARG_TYPE_TAG,
+    ARG_TYPE_PROPERTY
 } ArgType;
 
 typedef struct Argument Argument;
