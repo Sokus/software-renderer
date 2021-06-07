@@ -1,7 +1,13 @@
 #include "console.h"
 
+void Console_SetDefaultColor(Console_Color color)
+{
+    defaultColor = color;
+}
+
 void Console_SetActiveColor(Console_Color color)
 {
+    activeColor = color;
     if(color == COLOR_DEFAULT) color = defaultColor;
 
     bool bright = color >= COLOR_BRIGHT_BLACK;
@@ -38,5 +44,5 @@ void Console_Print(char* message, ...)
 
 void Console_Clear()
 {
-    printf("\033[2J");
+    printf("\033[H\033[J");
 }

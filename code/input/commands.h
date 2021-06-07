@@ -6,7 +6,7 @@
 #include "command.h"
 #include "logic/execute.h"
 
-Command gCommands[COMMANDS_MAX_COUNT];
+extern Command gCommands[];
 
 Command* GetCommands();
 void CreateCommands();

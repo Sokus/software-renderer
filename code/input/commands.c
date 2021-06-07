@@ -1,5 +1,7 @@
 #include "commands.h"
 
+Command gCommands[COMMANDS_MAX_COUNT];
+
 void CreateCommands()
 {
     int index = -1;
