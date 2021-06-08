@@ -335,13 +335,33 @@ void AddToInventory(Object* parent, Object* obj)
     }
 }
 
-void DropItem(Object* obj)
+bool PickUpItem(Object* parent, Object* obj)
 {
-    if(!obj) return;
-    Object* container = obj->parent;
-    if(!container) return;
-    Object* environment = container->parent;
-    if(!environment) return;
+    if(!parent || !obj) return false;
+    if(!HasProperty(obj->properties, OBJECT_PROPERTY_COLLECTABLE))
+        return false;
+    Object* oldParent = obj->parent;
     RemoveFromInventory(obj);
+    if(oldParent)
+        oldParent->inventory = GetListPageAligned(oldParent->inventory);
+    AddToInventory(parent, obj);
+    SetProperty(&obj->properties, OBJECT_PROPERTY_NEW, true);
+    return true;
+}
+
+bool DropItem(Object* obj)
+{
+    if(!obj) return false;
+    if(!HasProperty(obj->properties, OBJECT_PROPERTY_COLLECTABLE))
+        return false;
+    Object* container = obj->parent;
+    if(!container) return false;
+    Object* environment = container->parent;
+    if(!environment) return false;
+
+    RemoveFromInventory(obj);
+    container->inventory = GetListPageAligned(container->inventory);
     AddToInventory(environment, obj);
+    SetProperty(&obj->properties, OBJECT_PROPERTY_NEW, true);
+    return true;
 }

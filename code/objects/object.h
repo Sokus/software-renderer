@@ -54,7 +54,8 @@ void PrintInfo();
 
 void RemoveFromInventory(Object* obj);
 void AddToInventory(Object* parent, Object* obj);
-void DropItem(Object* obj);
+bool PickUpItem(Object* parent, Object* obj);
+bool DropItem(Object* obj);
 
 
 #endif

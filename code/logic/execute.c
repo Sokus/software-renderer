@@ -50,9 +50,17 @@ bool ExecuteLookAt()
 
 bool ExecuteInventory()
 {
-    SetProperty(&gContext, CONTEXT_INVENTORY_OPEN, true);
-    gpPlayer->inventory = GetFirstFromList(gpPlayer->inventory);
-    return true;
+    if( !HasProperty(gContext, CONTEXT_INVENTORY_OPEN) )
+    {
+        SetProperty(&gContext, CONTEXT_INVENTORY_OPEN, true);
+        gpPlayer->inventory = GetFirstFromList(gpPlayer->inventory);
+        return true;
+    }
+    else
+    {
+        Console_Print("Inventory is already open.\n");
+    }
+    return false;
 }
 
 static bool ExecuteNext()
@@ -107,7 +115,6 @@ static bool ExecutePage()
     }
     return false;
 }
-
 
 bool ExecuteInventoryNext()
 {
@@ -172,53 +179,36 @@ bool ExecuteLocationPage()
 bool ExecutePickUp()
 {
     Object* obj = GetArgumentOfType(ARG_TYPE_TAG, 0).p;
-    if(obj)
+
+    bool success = PickUpItem(gpPlayer, obj);
+    if(!success)
     {
-        if( HasProperty(obj->properties, OBJECT_PROPERTY_COLLECTABLE) )
-        {
-            Object* parent = obj->parent;
-            RemoveFromInventory(obj);
-            parent->inventory = GetListPageAligned(parent->inventory);
-            AddToInventory(gpPlayer, obj);
-            SetProperty(&obj->properties, OBJECT_PROPERTY_NEW, true);
-            return true;
-        }
-        else
-        {
-            char* tag = Copy(GetLongestFromArray(obj->tags, OBJECT_MAX_TAGS));
-            AddArticle(&tag);
-            Capitalise(&tag);
-            Console_Print("%s can't be picked up.\n", tag);
-            free(tag);
-        }
+        char* tag = Copy(GetLongestFromArray(obj->tags, OBJECT_MAX_TAGS));
+        AddArticle(&tag);
+        Capitalise(&tag);
+        Console_Print("%s can't be picked up.\n", tag);
+        free(tag);
     }
-    return false;
+
+    return success;
 }
 
+// NOTE(sokus): Same to ExecutePickUp
 bool ExecuteDrop()
 {
     Object* obj = GetArgumentOfType(ARG_TYPE_TAG, 0).p;
-    if(obj)
+
+    bool success = DropItem(obj);
+    if(!success)
     {
-        if( HasProperty(obj->properties, OBJECT_PROPERTY_COLLECTABLE) )
-        {
-            Object* parent = obj->parent;
-            RemoveFromInventory(obj);
-            parent->inventory = GetListPageAligned(parent->inventory);
-            AddToInventory(gpPlayer->parent, obj);
-            SetProperty(&obj->properties, OBJECT_PROPERTY_NEW, true);
-            return true;
-        }
-        else
-        {
-            char* tag = Copy(GetLongestFromArray(obj->tags, OBJECT_MAX_TAGS));
-            AddArticle(&tag);
-            Capitalise(&tag);
-            Console_Print("%s can't be dropped.\n", tag);
-            free(tag);
-        }
+        char* tag = Copy(GetLongestFromArray(obj->tags, OBJECT_MAX_TAGS));
+        AddArticle(&tag);
+        Capitalise(&tag);
+        Console_Print("%s can't be dropped.\n", tag);
+        free(tag);
     }
-    return false;
+
+    return success;
 }
 
 bool ExecuteOpen()
@@ -229,10 +219,19 @@ bool ExecuteOpen()
     {
         if( HasProperty(obj->properties, OBJECT_PROPERTY_CONTAINER) )
         {
-            SetProperty(&gContext, CONTEXT_CONTAINER_OPEN, true);
-            gpPlayer->target = obj;
-            obj->inventory = GetFirstFromList(obj->inventory);
-            return true;
+            bool alreadyInContainer = HasProperty(gContext, CONTEXT_CONTAINER_OPEN);
+            bool noTarget = !gpPlayer->target;
+            if( noTarget || alreadyInContainer)
+            {
+                SetProperty(&gContext, CONTEXT_CONTAINER_OPEN, true);
+                gpPlayer->target = obj;
+                obj->inventory = GetFirstFromList(obj->inventory);
+                return true;
+            }
+            else
+            {
+                Console_Print("You are already doing something else.\n");
+            }
         }
         else
         {
@@ -246,53 +245,36 @@ bool ExecuteOpen()
     return false;
 }
 
+// NOTE(sokus): Same to ExecutePickUp
 bool ExecuteMoveToInventory()
 {
     Object* obj = GetArgumentOfType(ARG_TYPE_TAG, 0).p;
 
-    if(obj)
+    bool success = PickUpItem(gpPlayer, obj);
+    if(!success)
     {
-        if( HasProperty(obj->properties, OBJECT_PROPERTY_COLLECTABLE) )
-        {
-            Object* parent = obj->parent;
-            RemoveFromInventory(obj);
-            parent->inventory = GetListPageAligned(parent->inventory);
-            AddToInventory(gpPlayer, obj);
-            SetProperty(&obj->properties, OBJECT_PROPERTY_NEW, true);
-            return true;
-        }
-        else
-        {
-            char* tag = Copy(GetLongestFromArray(obj->tags, OBJECT_MAX_TAGS));
-            AddArticle(&tag);
-            Capitalise(&tag);
-            Console_Print("%s can't be moved.\n", tag);
-            free(tag);
-        }
+        char* tag = Copy(GetLongestFromArray(obj->tags, OBJECT_MAX_TAGS));
+        AddArticle(&tag);
+        Capitalise(&tag);
+        Console_Print("%s can't be moved.\n", tag);
+        free(tag);
     }
-    return false;
+
+    return success;
 }
 
 bool ExecuteMoveToContainer()
 {
     Object* obj0 = GetArgumentOfType(ARG_TYPE_TAG, 0).p;
     Object* obj1 = GetArgumentOfType(ARG_TYPE_TAG, 1).p;
+    if(!obj0 || !obj1) return false;
 
-    if(obj0 && obj1)
+    bool success = false;
+    bool isContainer = HasProperty(obj1->properties, OBJECT_PROPERTY_CONTAINER);
+    if(isContainer)
     {
-        bool isCollectable = HasProperty(obj0->properties, OBJECT_PROPERTY_COLLECTABLE);
-        bool isContainer = HasProperty(obj1->properties, OBJECT_PROPERTY_CONTAINER);
-        if(isCollectable && isContainer)
-        {
-            Object* parent = obj0->parent;
-            RemoveFromInventory(obj0);
-            parent->inventory = GetListPageAligned(parent->inventory);
-            AddToInventory(obj1, obj0);
-            SetProperty(&obj0->properties, OBJECT_PROPERTY_NEW, true);
-            return true;
-        }
-        
-        if(!isCollectable)
+        success = PickUpItem(obj1, obj0);
+        if(!success)
         {
             char* tag = Copy(GetLongestFromArray(obj0->tags, OBJECT_MAX_TAGS));
             AddArticle(&tag);
@@ -300,17 +282,16 @@ bool ExecuteMoveToContainer()
             Console_Print("%s can't be moved.\n", tag);
             free(tag);
         }
-        
-        if(!isContainer)
-        {
-            char* tag = Copy(GetLongestFromArray(obj0->tags, OBJECT_MAX_TAGS));
-            AddArticle(&tag);
-            Capitalise(&tag);
-            Console_Print("%s isn't a container.\n", tag);
-            free(tag);
-        }
     }
-    return false;
+    else
+    {
+        char* tag = Copy(GetLongestFromArray(obj1->tags, OBJECT_MAX_TAGS));
+        AddArticle(&tag);
+        Capitalise(&tag);
+        Console_Print("%s isn't a container.\n", tag);
+        free(tag);
+    }
+    return success;
 }
 
 bool ExecuteClose()
@@ -329,26 +310,29 @@ bool ExecuteCloseInventory()
         SetProperty(&gContext, CONTEXT_INVENTORY_OPEN, false);
         return true;
     }
+    return false;
 }
 
 bool ExecuteCloseContainer()
 {
     if(HasProperty(gContext, CONTEXT_CONTAINER_OPEN))
-    {   
-        Object* parent = gpPlayer->target->parent;
-        if(HasProperty(parent->properties, OBJECT_PROPERTY_CONTAINER)
-            && parent != gpPlayer
-            && parent != gpPlayer->parent)
+    {
+        bool hasTarget = gpPlayer->target != NULL;
+        Object* parent = hasTarget ? gpPlayer->target->parent : NULL;
+        bool targetInContainer =
+            parent && HasProperty(parent->properties, OBJECT_PROPERTY_CONTAINER);
+        bool containerIsPlayerOrEnv = parent == gpPlayer || parent == gpPlayer->parent;
+
+        if(hasTarget && targetInContainer && !containerIsPlayerOrEnv)
         {
             gpPlayer->target = parent;
-            return true;
         }
         else
         {
             SetProperty(&gContext, CONTEXT_CONTAINER_OPEN, false);
             gpPlayer->target = NULL;
-            return true;
         }
+        return true;
     }
     return false;
 }
