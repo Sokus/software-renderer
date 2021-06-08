@@ -9,7 +9,8 @@ typedef enum
     ARG_TYPE_INT,
     ARG_TYPE_ORDINAL,
     ARG_TYPE_TAG,
-    ARG_TYPE_PROPERTY
+    ARG_TYPE_PROPERTY,
+    ARG_TYPE_BOOL
 } ArgType;
 
 typedef struct Argument Argument;
@@ -20,6 +21,7 @@ struct Argument
     {
         Object* p;
         int value;
+        Property property;
     };
     
 };

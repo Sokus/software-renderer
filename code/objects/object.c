@@ -47,7 +47,7 @@ void CreateObjects()
     Object* sword = (Object*)malloc(sizeof(Object));
     *sword = (Object) {0, {Copy("iron sword"), Copy("sword")}, Copy("It's an iron sword, its blade is dull.")};
     SetProperty(&sword->properties, OBJECT_PROPERTY_COLLECTABLE, true);
-    AddToInventory(chest, sword);
+    AddToInventory(gpPlayer, sword);
 
     Object* pouch2 = (Object*)malloc(sizeof(Object));
     *pouch2 = (Object) {0, {Copy("leather pouch"), Copy("pouch")}, Copy("It's a leather pouch.")};
@@ -146,6 +146,154 @@ Object* GetLastFromList(Object* member)
     return pObj;
 }
 
+int GetListPosition(Object* member)
+{
+    if(!member) return 0;
+    int position = 0;
+    while(member->prev)
+    {
+        member = member->prev;
+        position++;
+    }
+    return position;
+}
+
+int GetListLength(Object* member)
+{
+    if(!member) return 0;
+    int length = 1;
+    Object* p = member;
+    while(p->prev)
+    {
+        p = p->prev;
+        length++;
+    }
+    p = member;
+    while(p->next)
+    {
+        p = p->next;
+        length++;
+    }
+    return length;
+}
+
+Object* GetListPageRelative(Object* member, int offset)
+{
+    if(!member) return NULL;
+    int newPage = GetListPosition(member)/LIST_MAX_ROWS + offset;
+    int maxPage = (GetListLength(member)-1)/LIST_MAX_ROWS;
+    newPage =   (newPage < 0)       ? 0 :
+                (newPage > maxPage) ? maxPage :
+                                    newPage;
+    return GetListPage(member, newPage);
+}
+
+Object* GetListPageAligned(Object* member)
+{
+    int page = GetListPosition(member)/LIST_MAX_ROWS;
+    return GetListPage(member, page);
+}
+
+Object* GetListPage(Object* member, int page)
+{
+    if(!member) return NULL;
+    Object* p = member;
+    while(p->prev) p = p->prev;
+    int position = page*LIST_MAX_ROWS;
+    for(int i=0;
+        i<position && p->next != NULL;
+        i++)
+    {
+        p = p->next;
+    }
+    return p;
+}
+
+void ListObjects(Object* head, int limit)
+{
+    int objectsListed = 0;
+    Object* pObj=head;
+    while(pObj && (objectsListed < limit || limit == 0))
+    {
+        PrintObjectInfo(pObj);
+        pObj = pObj->next;
+        objectsListed++;
+    }
+}
+
+void PrintObjectInfo(Object* obj)
+{
+    if(!obj) return;
+    char* tag = GetLongestFromArray(obj->tags, OBJECT_MAX_TAGS);
+    if(HasProperty(obj->properties, OBJECT_PROPERTY_NEW))
+    {
+        Console_PrintColored("%s ", COLOR_BRIGHT_CYAN, tag);
+        SetProperty(&obj->properties, OBJECT_PROPERTY_NEW, false);
+    }
+    else
+    {
+        Console_Print("%s ", tag);
+    }
+
+    char* symbol = "\xB3 ";
+    if(HasProperty(obj->properties, OBJECT_PROPERTY_CONTAINER))
+    {
+        int items = GetListLength(obj->inventory);
+        Console_PrintColored("[%d] ", COLOR_YELLOW, items);
+    }
+    if(HasProperty(obj->properties, OBJECT_PROPERTY_PASSAGE))
+    {
+        Console_PrintColored(symbol, COLOR_BLUE);
+    }
+    if(HasProperty(obj->properties, OBJECT_PROPERTY_NPC))
+    {
+        Console_PrintColored(symbol, COLOR_CYAN);
+    }
+    Console_Print("\n");
+}
+
+void PrintPageInfo(Object* inventory)
+{
+    int currentPage = GetListPosition(inventory)/LIST_MAX_ROWS;
+    int totalPages = (GetListLength(inventory)-1)/LIST_MAX_ROWS;
+    if(totalPages) Console_PrintColored("[%d/%d]", COLOR_CYAN, currentPage+1, totalPages+1);
+}
+
+void PrintInfo()
+{
+    Console_Color headerColor = COLOR_CYAN;
+    if(HasProperty(gContext, CONTEXT_INVENTORY_OPEN))
+    {
+        Console_PrintColored("Inventory: ", headerColor);
+        PrintPageInfo(gpPlayer->inventory);
+        Console_Print("\n");
+        ListObjects(gpPlayer->inventory, LIST_MAX_ROWS);
+    }
+
+    if(HasProperty(gContext, CONTEXT_CONTAINER_OPEN) && gpPlayer->target)
+    {
+        char* tag = Copy(GetLongestFromArray(gpPlayer->target->tags, OBJECT_MAX_TAGS));
+        Capitalise(&tag);
+        Console_PrintColored("%s: ", headerColor, tag);
+        free(tag);
+
+        PrintPageInfo(gpPlayer->target->inventory);
+        Console_Print("\n");
+        ListObjects(gpPlayer->target->inventory, LIST_MAX_ROWS);
+    }
+
+    {
+        char* tag = Copy(GetLongestFromArray(gpPlayer->parent->tags, OBJECT_MAX_TAGS));
+        Capitalise(&tag);
+        Console_PrintColored("%s: ", headerColor, tag);
+        free(tag);
+
+        PrintPageInfo(gpPlayer->parent->inventory);
+        Console_Print("\n");
+        ListObjects(gpPlayer->parent->inventory, LIST_MAX_ROWS);
+    }
+}
+
 void RemoveFromInventory(Object* obj)
 {
     if(!obj || !obj->parent) return;
@@ -154,8 +302,8 @@ void RemoveFromInventory(Object* obj)
     {
         obj->parent->inventory = (obj->next) ? obj->next : obj->prev; 
     }
-    obj->parent = NULL;
     ListRemove(obj);
+    obj->parent = NULL;
 }
 
 void AddToInventory(Object* parent, Object* obj)
@@ -196,169 +344,4 @@ void DropItem(Object* obj)
     if(!environment) return;
     RemoveFromInventory(obj);
     AddToInventory(environment, obj);
-}
-
-void ListObjects(Object* head, int limit)
-{
-    if(!head) return;
-
-    int objectsListed = 0;
-    for(Object* pObj=head;
-        pObj != NULL && (objectsListed < limit || limit == 0);
-        pObj=pObj->next)
-    {
-        if(pObj == gpPlayer) continue;
-
-        PrintObjectInfo(pObj);
-        objectsListed++;
-    }
-}
-
-int GetListPosition(Object* member)
-{
-    if(!member) return 0;
-    int position = 0;
-    while(member->prev)
-    {
-        member = member->prev;
-        position++;
-    }
-    return position;
-}
-
-int GetListLength(Object* member)
-{
-    if(!member) return 0;
-    int length = 1;
-    Object* p = member;
-    while(p->prev)
-    {
-        p = p->prev;
-        length++;
-    }
-    p = member;
-    while(p->next)
-    {
-        p = p->next;
-        length++;
-    }
-    return length;
-}
-
-Object* MoveListPage(Object* member, int offset)
-{
-    if(!member) return NULL;
-    int newPage = GetListPosition(member)/LIST_MAX_ROWS + offset;
-    int maxPage = GetListLength(member)/LIST_MAX_ROWS;
-    newPage =   (newPage < 0)       ? 0 :
-                (newPage > maxPage) ? maxPage :
-                                    newPage;
-    return SetListPage(member, newPage);
-}
-
-Object* SetListPage(Object* member, int page)
-{
-    if(!member) return NULL;
-    Object* p = member;
-    while(p->prev) p = p->prev;
-    int position = page*LIST_MAX_ROWS;
-    for(int i=0;
-        i<position && p->next != NULL;
-        i++)
-    {
-        p = p->next;
-    }
-    return p;
-}
-
-void PrintObjectInfo(Object* obj)
-{
-    char* tag = GetLongestFromArray(obj->tags, OBJECT_MAX_TAGS);
-    if(HasProperty(obj->properties, OBJECT_PROPERTY_NEW))
-    {
-        Console_PrintColored("%s ", COLOR_BRIGHT_CYAN, tag);
-        SetProperty(&obj->properties, OBJECT_PROPERTY_NEW, false);
-    }
-    else
-    {
-        Console_Print("%s ", tag);
-    }
-
-    char* symbol = (char*)malloc(sizeof(char)*2);
-    symbol[0] = (char)179, symbol[1] = '\0';
-
-    if(HasProperty(obj->properties, OBJECT_PROPERTY_CONTAINER))
-    {
-        int items = GetListLength(obj->inventory);
-        Console_PrintColored("[%d]", COLOR_YELLOW, items);
-    }
-    if(HasProperty(obj->properties, OBJECT_PROPERTY_PASSAGE))
-    {
-        Console_PrintColored(symbol, COLOR_BLUE);
-    }
-    if(HasProperty(obj->properties, OBJECT_PROPERTY_NPC))
-    {
-        Console_PrintColored("npc", COLOR_CYAN);
-    }
-    free(symbol);
-    Console_Print("\n");
-}
-
-void PrintInfo()
-{
-    Console_Color headerColor = COLOR_CYAN;
-    if(HasProperty(gContext, CONTEXT_INVENTORY_OPEN))
-    {
-        Console_PrintColored("Inventory: ", headerColor);
-
-        int curPage = GetListPosition(gpPlayer->inventory)/LIST_MAX_ROWS + 1;
-        int totalPages = (GetListLength(gpPlayer->inventory)-1)/LIST_MAX_ROWS + 1;
-        if(totalPages>1) Console_PrintColored("[%d/%d]", headerColor, curPage, totalPages);
-
-        Console_PrintColored("\n", headerColor);
-
-        if(gpPlayer->inventory == NULL)
-            Console_Print("(empty)\n");
-        ListObjects(gpPlayer->inventory, LIST_MAX_ROWS);
-    }
-
-    if(HasProperty(gContext, CONTEXT_CONTAINER_OPEN))
-    {
-        char* tag = Copy(GetLongestFromArray(gpPlayer->target->tags, OBJECT_MAX_TAGS));
-        Capitalise(&tag);
-        Console_PrintColored("%s: ", headerColor, tag);
-        free(tag);
-
-        int curPage = GetListPosition(gpPlayer->target->inventory)/LIST_MAX_ROWS + 1;
-        int totalPages = (GetListLength(gpPlayer->target->inventory)-1)/LIST_MAX_ROWS + 1;
-        if(totalPages>1) Console_PrintColored("[%d/%d] ", headerColor, curPage, totalPages);
-
-        Console_PrintColored("\n", headerColor);
-
-        if(gpPlayer->target->inventory == NULL)
-            Console_Print("(empty)\n");
-        ListObjects(gpPlayer->target->inventory, LIST_MAX_ROWS);
-    }
-
-    char* tag = Copy(GetLongestFromArray(gpPlayer->parent->tags, OBJECT_MAX_TAGS));
-    Capitalise(&tag);
-    Console_PrintColored("%s: \n", headerColor, tag);
-    free(tag);
-
-    ListObjects(GetFirstFromList(gpPlayer->parent->inventory), 0);
-}
-
-bool Compare(Object* objA, Object* objB)
-{
-    if(objA == objB) return true;
-    if(objA == NULL || objB == NULL) return false;
-
-    if(objA->properties != objB->properties) return false;
-    for(int i=0; i<OBJECT_MAX_TAGS; i++)
-    {
-        if(!CompareStringInsensitive(objA->tags[i], objB->tags[i])) return false;
-    }
-    if(!CompareStringInsensitive(objA->description, objB->description)) return false;
-
-    return true;
 }

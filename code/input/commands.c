@@ -94,6 +94,28 @@ void CreateCommands()
     SetProperty(&gCommands[index].contextConditions, CONTEXT_CONTAINER_OPEN, true);
 
     gCommands[++index] = (Command) {    0,
+                                        { Copy("$0t22 page next"),
+                                          Copy("0t22 next page") },
+                                        Copy("<location> page next"),
+                                        NULL,
+                                        ExecuteLocationNext };
+
+
+    gCommands[++index] = (Command) {    0,
+                                        { Copy("$0t22 page previous"),
+                                          Copy("$0t22 previous page") },
+                                        Copy("<location> page previous"),
+                                        NULL,
+                                        ExecuteLocationPrev };
+
+    gCommands[++index] = (Command) {    0,
+                                        { Copy("$0t22 $1o page"),
+                                          Copy("$0t22 page $1i") },
+                                        Copy("<location> page <number>"),
+                                        NULL,
+                                        ExecuteLocationPage };
+
+    gCommands[++index] = (Command) {    0,
                                         { Copy("pick up the $0t24"),
                                           Copy("pick up the $0o $1t24") },
                                         Copy("pick up the <name>"),
@@ -160,8 +182,8 @@ void CreateCommands()
     SetProperty(&gCommands[index].contextConditions, CONTEXT_DEBUG_MODE, true);
 
     gCommands[++index] = (Command) {    0,
-                                        { Copy("property set $0t16 $1p $2i"),
-                                          Copy("property set $0o $1t16 $2p $3i") },
+                                        { Copy("property set $0t16 $1p $2b"),
+                                          Copy("property set $0o $1t16 $2p $3b") },
                                         Copy("property set <object name> <property name> <value>"),
                                         NULL,
                                         ExecuteSetProperty };

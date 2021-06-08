@@ -20,12 +20,19 @@ bool ExecuteList();
 bool ExecuteLookAt();
 
 bool ExecuteInventory();
+
+static bool ExecuteNext();
+static bool ExecutePrev();
+static bool ExecutePage();
 bool ExecuteInventoryNext();
 bool ExecuteInventoryPrev();
 bool ExecuteInventoryPage();
 bool ExecuteContainerNext();
 bool ExecuteContainerPrev();
 bool ExecuteContainerPage();
+bool ExecuteLocationNext();
+bool ExecuteLocationPrev();
+bool ExecuteLocationPage();
 
 bool ExecutePickUp();
 bool ExecuteDrop();

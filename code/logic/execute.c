@@ -8,7 +8,6 @@ bool ExecuteClear()
 
 bool ExecuteQuit()
 {
-    Console_Print("Goodbye.\n");
     SetProperty(&gContext, CONTEXT_SHUTDOWN, true);
     return false;
 }
@@ -29,8 +28,12 @@ bool ExecuteHelp()
             Console_Print("\n");
         }
     }
-    Console_PrintColored("\nDisclaimer!\nYou can put an ordinal (e.g. 'second' or '3th')\n", COLOR_BRIGHT_YELLOW);
-    Console_PrintColored("before the <name> to implicitly pick an object\n(instead of the first matching one)\n", COLOR_BRIGHT_YELLOW);
+    Console_Print("\n");
+    Console_Color disclaimerColor = COLOR_BRIGHT_YELLOW;
+    Console_PrintColored("Disclaimer!\n", disclaimerColor);
+    Console_PrintColored("You can put an ordinal (e.g. 'second' or '3th')\n", disclaimerColor);
+    Console_PrintColored("before the <name> to implicitly pick an object\n", disclaimerColor);
+    Console_PrintColored("(instead of the first matching one)\n", disclaimerColor);
     return false;
 }
 
@@ -52,100 +55,119 @@ bool ExecuteInventory()
     return true;
 }
 
-bool ExecuteInventoryNext()
+static bool ExecuteNext()
 {
-    if(HasProperty(gContext, CONTEXT_INVENTORY_OPEN))
+    Argument arg0 = GetArgumentOfType(ARG_TYPE_TAG, 0);
+    Argument arg1 = GetArgumentOfType(ARG_TYPE_PROPERTY, 0);
+    if(arg0.type == ARG_TYPE_TAG && arg0.p)
     {
-        gpPlayer->inventory = MoveListPage(gpPlayer->inventory, 1);
+        if(arg1.type == ARG_TYPE_PROPERTY
+            && !HasProperty(gContext, arg1.property))
+        return false;
+
+        arg0.p->inventory = GetListPageRelative(arg0.p->inventory, 1);
         return true;
     }
-    else
+    return false;
+}
+
+static bool ExecutePrev()
+{
+    Argument arg0 = GetArgumentOfType(ARG_TYPE_TAG, 0);
+    Argument arg1 = GetArgumentOfType(ARG_TYPE_PROPERTY, 0);
+    if(arg0.type == ARG_TYPE_TAG && arg0.p)
     {
-        Console_Print("You are not in your inventory.\n");
+        if(arg1.type == ARG_TYPE_PROPERTY
+            && !HasProperty(gContext, arg1.property))
         return false;
+
+        arg0.p->inventory = GetListPageRelative(arg0.p->inventory, -1);
+        return true;
     }
+    return false;
+}
+
+static bool ExecutePage()
+{
+    Argument argT = GetArgumentOfType(ARG_TYPE_TAG, 0);
+    Argument argP = GetArgumentOfType(ARG_TYPE_PROPERTY, 0);
+    if(argT.type == ARG_TYPE_TAG && argT.p)
+    {
+        if(argP.type == ARG_TYPE_PROPERTY
+            && !HasProperty(gContext, argP.property))
+        return false;
+
+        int page = 0;
+        Argument argI = GetArgumentOfType(ARG_TYPE_INT, 0);
+        Argument argO = GetArgumentOfType(ARG_TYPE_ORDINAL, 0);
+        if(argI.type == ARG_TYPE_INT) page = argI.value - 1;
+        if(argO.type == ARG_TYPE_ORDINAL) page = argO.value;
+        argT.p->inventory = GetListPage(argT.p->inventory, page);
+        return true;
+    }
+    return false;
+}
+
+
+bool ExecuteInventoryNext()
+{
+    AppendArgument((Argument){ ARG_TYPE_TAG, gpPlayer});
+    AppendArgument((Argument){ ARG_TYPE_PROPERTY, .property=CONTEXT_INVENTORY_OPEN});
+    return ExecuteNext();
 }
 
 bool ExecuteInventoryPrev()
 {
-    if(HasProperty(gContext, CONTEXT_INVENTORY_OPEN))
-    {
-        gpPlayer->inventory = MoveListPage(gpPlayer->inventory, -1);
-        return true;
-    }
-    else
-    {
-        Console_Print("You are not in your inventory.\n");
-        return false;
-    }
+    AppendArgument((Argument){ ARG_TYPE_TAG, gpPlayer});
+    AppendArgument((Argument){ ARG_TYPE_PROPERTY, .property=CONTEXT_INVENTORY_OPEN});
+    return ExecutePrev();
 }
 
 bool ExecuteInventoryPage()
 {
-    if(HasProperty(gContext, CONTEXT_INVENTORY_OPEN))
-    {
-        int page = 0;
-        Argument argI = GetArgumentOfType(ARG_TYPE_INT, 0);
-        Argument argO = GetArgumentOfType(ARG_TYPE_ORDINAL, 0);
-        if(argI.type == ARG_TYPE_INT) page = argI.value - 1;
-        if(argO.type == ARG_TYPE_ORDINAL) page = argO.value;
-        gpPlayer->inventory = SetListPage(gpPlayer->inventory, page);
-        return true;
-    }
-    else
-    {
-        Console_Print("You are not in your inventory.\n");
-        return false;
-    }
+    AppendArgument((Argument){ ARG_TYPE_TAG, gpPlayer});
+    AppendArgument((Argument){ ARG_TYPE_PROPERTY, .property=CONTEXT_INVENTORY_OPEN});
+    return ExecutePage();
 }
 
 bool ExecuteContainerNext()
 {
-    if(HasProperty(gContext, CONTEXT_CONTAINER_OPEN))
-    {
-        gpPlayer->target->inventory = MoveListPage(gpPlayer->target->inventory, 1);
-        return true;
-    }
-    else
-    {
-        Console_Print("You are not looking into any container.\n");
-        return false;
-    }
+    AppendArgument((Argument){ ARG_TYPE_TAG, gpPlayer->target});
+    AppendArgument((Argument){ ARG_TYPE_PROPERTY, .property=CONTEXT_CONTAINER_OPEN});
+    return ExecuteNext();
 }
 
 bool ExecuteContainerPrev()
 {
-    if(HasProperty(gContext, CONTEXT_CONTAINER_OPEN))
-    {
-        gpPlayer->target->inventory = MoveListPage(gpPlayer->target->inventory, -1);
-        return true;
-    }
-    else
-    {
-        Console_Print("You are not looking into any container.\n");
-        return false;
-    }
+    AppendArgument((Argument){ ARG_TYPE_TAG, gpPlayer->target});
+    AppendArgument((Argument){ ARG_TYPE_PROPERTY, .property=CONTEXT_CONTAINER_OPEN});
+    return ExecutePrev();
 }
 
 bool ExecuteContainerPage()
 {
-    if(HasProperty(gContext, CONTEXT_CONTAINER_OPEN))
-    {
-        int page = 0;
-        Argument argI = GetArgumentOfType(ARG_TYPE_INT, 0);
-        Argument argO = GetArgumentOfType(ARG_TYPE_ORDINAL, 0);
-        if(argI.type == ARG_TYPE_INT) page = argI.value - 1;
-        if(argO.type == ARG_TYPE_ORDINAL) page = argO.value;
-        gpPlayer->target->inventory = SetListPage(gpPlayer->target->inventory, page);
-        return true;
-    }
-    else
-    {
-        Console_Print("You are not in your inventory.\n");
-        return false;
-    }
+    AppendArgument((Argument){ ARG_TYPE_TAG, gpPlayer->target});
+    AppendArgument((Argument){ ARG_TYPE_PROPERTY, .property=CONTEXT_CONTAINER_OPEN});
+    return ExecutePage();
 }
 
+bool ExecuteLocationNext()
+{
+    AppendArgument((Argument){ ARG_TYPE_TAG, gpPlayer->parent});
+    return ExecuteNext();
+}
+
+bool ExecuteLocationPrev()
+{
+    AppendArgument((Argument){ ARG_TYPE_TAG, gpPlayer->parent});
+    return ExecutePrev();
+}
+
+bool ExecuteLocationPage()
+{
+    AppendArgument((Argument){ ARG_TYPE_TAG, gpPlayer->parent});
+    return ExecutePage();
+}
 
 bool ExecutePickUp()
 {
@@ -154,7 +176,9 @@ bool ExecutePickUp()
     {
         if( HasProperty(obj->properties, OBJECT_PROPERTY_COLLECTABLE) )
         {
+            Object* parent = obj->parent;
             RemoveFromInventory(obj);
+            parent->inventory = GetListPageAligned(parent->inventory);
             AddToInventory(gpPlayer, obj);
             SetProperty(&obj->properties, OBJECT_PROPERTY_NEW, true);
             return true;
@@ -178,9 +202,9 @@ bool ExecuteDrop()
     {
         if( HasProperty(obj->properties, OBJECT_PROPERTY_COLLECTABLE) )
         {
+            Object* parent = obj->parent;
             RemoveFromInventory(obj);
-            int page = (GetListLength(gpPlayer->inventory)-1)/LIST_MAX_ROWS;
-            gpPlayer->inventory = SetListPage(gpPlayer->inventory, page);
+            parent->inventory = GetListPageAligned(parent->inventory);
             AddToInventory(gpPlayer->parent, obj);
             SetProperty(&obj->properties, OBJECT_PROPERTY_NEW, true);
             return true;
@@ -230,7 +254,9 @@ bool ExecuteMoveToInventory()
     {
         if( HasProperty(obj->properties, OBJECT_PROPERTY_COLLECTABLE) )
         {
+            Object* parent = obj->parent;
             RemoveFromInventory(obj);
+            parent->inventory = GetListPageAligned(parent->inventory);
             AddToInventory(gpPlayer, obj);
             SetProperty(&obj->properties, OBJECT_PROPERTY_NEW, true);
             return true;
@@ -258,9 +284,9 @@ bool ExecuteMoveToContainer()
         bool isContainer = HasProperty(obj1->properties, OBJECT_PROPERTY_CONTAINER);
         if(isCollectable && isContainer)
         {
+            Object* parent = obj0->parent;
             RemoveFromInventory(obj0);
-            int page = (GetListLength(gpPlayer->inventory)-1)/LIST_MAX_ROWS;
-            gpPlayer->inventory = SetListPage(gpPlayer->inventory, page);
+            parent->inventory = GetListPageAligned(parent->inventory);
             AddToInventory(obj1, obj0);
             SetProperty(&obj0->properties, OBJECT_PROPERTY_NEW, true);
             return true;
@@ -353,7 +379,7 @@ bool ExecuteSetProperty()
 {
     Object* obj = GetArgumentOfType(ARG_TYPE_TAG, 0).p;
     Property property = GetArgumentOfType(ARG_TYPE_PROPERTY, 0).value;
-    bool value = GetArgumentOfType(ARG_TYPE_INT, 0).value != 0;
+    bool value = GetArgumentOfType(ARG_TYPE_BOOL, 0).value != 0;
     if(obj)
     {
         bool currentValue = HasProperty(obj->properties, property);

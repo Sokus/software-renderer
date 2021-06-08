@@ -24,7 +24,5 @@ int main()
     }
     DeleteObjects();
     DeleteCommands();
-    Console_Print("Press enter to continue...\n");
-    getc(stdin);
     return 0;
 }

@@ -31,6 +31,7 @@ typedef struct
 static Argument gArgs[ARGS_MAX_COUNT];
 
 Argument GetArgumentOfType(ArgType argType, int skip);
+void AppendArgument(Argument arg);
 static void ClearArgs();
 
 void ParseInput(char* input);
@@ -42,6 +43,8 @@ static int ReadArgumentInt(char* src, int* value);
 static int ReadArgumentOrdinal(char* src, int* value);
 static int ReadArgumentTag(char* src, void** value, SearchParameters* params);
 static int ReadArgumentProperty(char* src, int* value);
+static int ReadArgumentBool(char* src, int* value);
+
 
 static Object* FindByTag(char* src, SearchParameters* params);
 static Object* FindByTagRecursive(char* src, Object* head, SearchParameters* params, bool deepSearch);

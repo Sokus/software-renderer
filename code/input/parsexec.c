@@ -14,6 +14,18 @@ Argument GetArgumentOfType(ArgType argType, int skip)
     return arg;
 }
 
+void AppendArgument(Argument arg)
+{
+    for(int i=0; i<ARGS_MAX_COUNT; i++)
+    {
+        if(gArgs[i].type == ARG_TYPE_INVALID)
+        {
+            gArgs[i] = arg;
+            break;
+        }
+    }
+}
+
 static void ClearArgs()
 {
     for(int i=0; i<ARGS_MAX_COUNT; i++) gArgs[i] = (Argument){0};
@@ -155,6 +167,9 @@ static bool MatchPattern(char* src, char* pattern, SearchParameters params)
                 case ARG_TYPE_PROPERTY:
                 { result = ReadArgumentProperty(src, &arg.value); } break;
 
+                case ARG_TYPE_BOOL:
+                { result = ReadArgumentBool(src, &arg.value); } break;
+
                 default: { } break;
             }
 
@@ -184,6 +199,7 @@ static ArgType EvaluateType(char type)
             type == 'o' ? ARG_TYPE_ORDINAL :
             type == 't' ? ARG_TYPE_TAG :
             type == 'p' ? ARG_TYPE_PROPERTY :
+            type == 'b' ? ARG_TYPE_BOOL : 
             ARG_TYPE_INVALID;
 }
 
@@ -271,6 +287,24 @@ static int ReadArgumentProperty(char* src, int* value)
     return charactersRead;
 }
 
+static int ReadArgumentBool(char* src, int* value)
+{
+    int charactersRead = ReadArgumentInt(src, value);
+    if(charactersRead) return charactersRead;
+
+    char* values[] = {"false", "true"};
+    for(int i=0; i<2; i++)
+    {
+        if(StartsWith(src, values[i]))
+        {
+            *value = i;
+            return GetLength(values[i]);
+        }
+    }
+
+    return 0;
+}
+
 static Object* FindByTag(char* src, SearchParameters* params)
 {
     Object* match = NULL;
@@ -341,7 +375,7 @@ static Object* FindByTag(char* src, SearchParameters* params)
             pObj != NULL;
             pObj = pObj->next)
         {
-            if(MatchObjectTag(src, pObj, params))
+            if(pObj != gpPlayer && MatchObjectTag(src, pObj, params))
             {
                 match = pObj;
                 params->matchesToSkip--;
