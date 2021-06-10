@@ -4,8 +4,11 @@
 
 PropertyField gContext;
 
+#include <conio.h>
+
 int main()
 {
+    #ifdef S_RUN
     CreateObjects();
     CreateCommands();
     Console_SetDefaultColor(COLOR_WHITE);
@@ -24,5 +27,13 @@ int main()
     }
     DeleteObjects();
     DeleteCommands();
+    #endif
+
+    char c;
+    while(c = getch(), c != 'x')
+    {
+        printf("%c", c);
+    }
+
     return 0;
 }

@@ -5,34 +5,18 @@
 #include <stdbool.h>
 #include <stdarg.h>
 
-typedef enum Console_Color
-{
-    COLOR_BLACK,
-    COLOR_RED,
-    COLOR_GREEN,
-    COLOR_YELLOW,
-    COLOR_BLUE,
-    COLOR_MAGENTA,
-    COLOR_CYAN,
-    COLOR_WHITE,
-    COLOR_BRIGHT_BLACK,
-    COLOR_BRIGHT_RED,
-    COLOR_BRIGHT_GREEN,
-    COLOR_BRIGHT_YELLOW,
-    COLOR_BRIGHT_BLUE,
-    COLOR_BRIGHT_MAGENTA,
-    COLOR_BRIGHT_CYAN,
-    COLOR_BRIGHT_WHITE,
-    COLOR_DEFAULT
-} Console_Color;
+#include "console_color.h"
+#include "message.h"
 
-static Console_Color defaultColor;
-static Console_Color activeColor;
+static MessageRing gMessageRing;
 
-void Console_SetDefaultColor(Console_Color color);
-void Console_SetActiveColor(Console_Color color);
+static Color defaultColor;
+static Color activeColor;
+
+void Console_SetDefaultColor(Color color);
+void Console_SetActiveColor(Color color);
 void Console_ResetColor();
-void Console_PrintColored(char* message, Console_Color color, ...);
+void Console_PrintColored(char* message, Color color, ...);
 void Console_Print(char* message, ...);
 void Console_Clear();
 

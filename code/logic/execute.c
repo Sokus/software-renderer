@@ -29,7 +29,7 @@ bool ExecuteHelp()
         }
     }
     Console_Print("\n");
-    Console_Color disclaimerColor = COLOR_BRIGHT_YELLOW;
+    Color disclaimerColor = COLOR_BRIGHT_YELLOW;
     Console_PrintColored("Disclaimer!\n", disclaimerColor);
     Console_PrintColored("You can put an ordinal (e.g. 'second' or '3th')\n", disclaimerColor);
     Console_PrintColored("before the <name> to implicitly pick an object\n", disclaimerColor);

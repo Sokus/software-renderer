@@ -261,13 +261,17 @@ void PrintPageInfo(Object* inventory)
 
 void PrintInfo()
 {
-    Console_Color headerColor = COLOR_CYAN;
+    Color headerColor = COLOR_CYAN;
     if(HasProperty(gContext, CONTEXT_INVENTORY_OPEN))
     {
         Console_PrintColored("Inventory: ", headerColor);
         PrintPageInfo(gpPlayer->inventory);
         Console_Print("\n");
         ListObjects(gpPlayer->inventory, LIST_MAX_ROWS);
+        if(!gpPlayer->inventory)
+        {
+            Console_Print("(empty)\n");
+        }
     }
 
     if(HasProperty(gContext, CONTEXT_CONTAINER_OPEN) && gpPlayer->target)
@@ -280,6 +284,10 @@ void PrintInfo()
         PrintPageInfo(gpPlayer->target->inventory);
         Console_Print("\n");
         ListObjects(gpPlayer->target->inventory, LIST_MAX_ROWS);
+        if(!gpPlayer->target->inventory)
+        {
+            Console_Print("(empty)\n");
+        }
     }
 
     {
@@ -291,6 +299,10 @@ void PrintInfo()
         PrintPageInfo(gpPlayer->parent->inventory);
         Console_Print("\n");
         ListObjects(gpPlayer->parent->inventory, LIST_MAX_ROWS);
+        if(!gpPlayer->parent->inventory)
+        {
+            Console_Print("(empty)\n");
+        }
     }
 }
 

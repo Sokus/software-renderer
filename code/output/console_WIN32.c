@@ -1,19 +1,19 @@
 #include "console.h"
 #include <windows.h>
 
-void Console_SetDefaultColor(Console_Color color)
+void Console_SetDefaultColor(Color color)
 {
     defaultColor = color;
 }
 
-void Console_SetActiveColor(Console_Color color)
+void Console_SetActiveColor(Color color)
 {
     activeColor = color;
     int attribute;
     if(color == COLOR_DEFAULT) color = defaultColor;
     
     bool bright = color >= COLOR_BRIGHT_BLACK;
-    color = (Console_Color)((int)color % 8);
+    color = (color-1) % 8 + 1;
     attribute = color == COLOR_BLACK   ? 0 :
                 color == COLOR_BLUE    ? 1 :
                 color == COLOR_GREEN   ? 2 :
@@ -33,9 +33,9 @@ void Console_ResetColor()
     Console_SetActiveColor(defaultColor);
 }
 
-void Console_PrintColored(char* message, Console_Color color, ...)
+void Console_PrintColored(char* message, Color color, ...)
 {
-    Console_Color oldColor = activeColor;
+    Color oldColor = activeColor;
     Console_SetActiveColor(color);
     
     va_list argList;
