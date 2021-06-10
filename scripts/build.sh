@@ -11,12 +11,14 @@ mkdir build
 pushd ./build
 
 exec > /dev/tty
+pwd
 gcc -o summoned\
- ../code/input/*.c\
+ ../code/console/*.c\
  ../code/logic/*.c\
  ../code/objects/*.c\
- ../code/output/*_LINUX.c\
+ ../code/parser/*.c\
  ../code/utility/*.c\
+ ../code/platform/linux/*_LINUX.c\
  ../code/*.c\
  -I../code
 exec > /dev/null

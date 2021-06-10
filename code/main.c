@@ -1,10 +1,10 @@
-#include "input/parsexec.h"
+#include "parser/parsexec.h"
 #include "objects/object.h"
-#include "output/console.h"
+#include "console/output.h"
 
 PropertyField gContext;
 
-#include <conio.h>
+#include <stdio.h>
 
 int main()
 {
@@ -29,11 +29,6 @@ int main()
     DeleteCommands();
     #endif
 
-    char c;
-    while(c = getch(), c != 'x')
-    {
-        printf("%c", c);
-    }
-
+    printf("Hello\n");
     return 0;
 }

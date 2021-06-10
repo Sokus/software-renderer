@@ -1,4 +1,4 @@
-#include "console.h"
+#include "console/output.h"
 #include <windows.h>
 
 void Console_SetDefaultColor(Color color)

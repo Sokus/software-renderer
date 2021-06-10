@@ -5,7 +5,7 @@
 #include <stdbool.h>
 #include <stdarg.h>
 
-#include "console_color.h"
+#include "color.h"
 #include "message.h"
 
 static MessageRing gMessageRing;

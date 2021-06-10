@@ -2,10 +2,10 @@
 #define EXECUTE_H
 
 #include "properties.h"
-#include "input/argument.h"
-#include "input/parsexec.h"
+#include "parser/argument.h"
+#include "parser/parsexec.h"
 #include "objects/object.h"
-#include "output/console.h"
+#include "console/output.h"
 
 extern Object* gpObjectRoot;
 extern Object* gpPlayer;

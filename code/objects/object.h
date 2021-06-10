@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 
-#include "output/console.h"
+#include "console/output.h"
 #include "properties.h"
 #include "utility/strops.h"
 

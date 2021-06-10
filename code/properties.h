@@ -3,7 +3,7 @@
 
 #include <stdbool.h>
 
-#include "output/console.h"
+#include "console/output.h"
 
 typedef enum Property
 {

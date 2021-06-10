@@ -1,5 +1,5 @@
-#ifndef CONSOLE_COLOR_H
-#define CONSOLE_COLOR_H
+#ifndef COLOR_H
+#define COLOR_H
 
 typedef enum Color
 {

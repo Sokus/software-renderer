@@ -8,7 +8,7 @@
 #include "command.h"
 #include "commands.h"
 #include "objects/object.h"
-#include "output/console.h"
+#include "console/output.h"
 #include "properties.h"
 
 #define ARGS_MAX_COUNT 10

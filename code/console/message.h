@@ -3,7 +3,7 @@
 
 #include <stdlib.h>
 
-#include "console_color.h"
+#include "color.h"
 
 #define MESSAGE_RING_SIZE 128
 
