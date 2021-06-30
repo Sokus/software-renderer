@@ -1,44 +1,47 @@
 #include "strops.h"
 
-bool IsUpper(char src)
+#include <stdlib.h>
+
+bool IsUpper(char c)
 {
-    return src >= 'A' && src <= 'Z';
+    return c >= 'A' && c <= 'Z';
 }
 
-bool IsLetter(char src)
+bool IsLetter(char c)
 {
-    return src >= 'A' && src <= 'Z'
-        || src >= 'a' && src <= 'z';
+    return c >= 'A' && c <= 'Z'
+        || c >= 'a' && c <= 'z';
 }
 
-bool IsNumber(char src)
+bool IsNumber(char c)
 {
-    return src >= '0' && src <= '9';
+    return c >= '0' && c <= '9';
 }
 
-bool CompareCharInsensitive(char a, char b)
+int CompareCharInsensitive(char a, char b)
 {
-    // ASCII:  A(65) - a(97) = 32
-    if(a == b) return true;
+    if(a == b) return 0;
+
+    // ASCII: A(65) - a(97) = 32
     if(IsUpper(a)) a += 32;
     if(IsUpper(b)) b += 32;
-    return a == b;
+    return a < b ? -1 : 1;
 }
 
-bool CompareStringInsensitive(char* srcA, char* srcB)
+int CompareStringInsensitive(char* srcA, char* srcB)
 {
-    if(srcA == srcB) return true;
-    if(!srcA || !srcB) return false;
+    if(srcA == srcB) return 0;
+    if(!srcA || !srcB) return 0;
 
+    int testValue = 0;
     while(1)
     {
-        if(!CompareCharInsensitive(*srcA, *srcB)) return false;
-        srcA++;
-        srcB++;
-        bool aEnded = *srcA == '\0';
-        bool bEnded = *srcB == '\0';
-        if(aEnded != bEnded) return false;
-        if(aEnded && bEnded) return true;
+        testValue = CompareCharInsensitive(*srcA, *srcB);
+        if(testValue) return testValue;
+        srcA++, srcB++;
+        bool aEnded = (*srcA == '\0');
+        bool bEnded = (*srcB == '\0');
+        if(aEnded && bEnded) return 0;
     }
 }
 
@@ -184,10 +187,11 @@ char* Copy(char* src)
 {
     int length = GetLength(src);
     char *new = (char *)malloc(sizeof(char)*(length+1));
-    for(int i=0; i<length+1; i++)
+    for(int i=0; i<length; i++)
     {
         new[i] = src[i];
     }
+    new[length] = '\0';
     return new;
 }
 

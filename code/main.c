@@ -1,10 +1,14 @@
-#include "parser/parsexec.h"
-#include "objects/object.h"
-#include "console/output.h"
-
-PropertyField gContext;
-
 #include <stdio.h>
+#include <stdbool.h>
+#include <stdlib.h>
+
+#include "properties.h"
+
+#include "parser/parsexec.h"
+
+PropertyBitField gContext;
+
+
 
 int main()
 {
@@ -18,7 +22,7 @@ int main()
     while(true)
     {
         ParseInput(buffer);
-        if(HasProperty(gContext, CONTEXT_SHUTDOWN)) break;
+        if(HasProperty(gContext, GS_SHUTDOWN)) break;
         
         Console_SetActiveColor(COLOR_BRIGHT_WHITE);
         Console_Print("> ");
@@ -29,6 +33,12 @@ int main()
     DeleteCommands();
     #endif
 
-    printf("Hello\n");
+    while(1)
+    {
+        ProcessInput();
+    }
+
+    printf("Press enter to continue...\n");
+    getc(stdin);
     return 0;
 }

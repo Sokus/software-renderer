@@ -1,14 +1,7 @@
 #ifndef CONSOLE_H
 #define CONSOLE_H
 
-#include <stdio.h>
-#include <stdbool.h>
-#include <stdarg.h>
-
 #include "color.h"
-#include "message.h"
-
-static MessageRing gMessageRing;
 
 static Color defaultColor;
 static Color activeColor;

@@ -1,5 +1,11 @@
+#ifdef _WIN32
+
 #include "console/output.h"
+
 #include <windows.h>
+#include <stdio.h>
+#include <stdbool.h>
+#include <stdarg.h>
 
 void Console_SetDefaultColor(Color color)
 {
@@ -93,3 +99,5 @@ void Console_Clear()
 
     SetConsoleCursorPosition(hConsole, csbi.dwCursorPosition);
 }
+
+#endif // WIN32

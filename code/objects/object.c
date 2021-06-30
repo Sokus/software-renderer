@@ -1,5 +1,11 @@
 #include "object.h"
 
+#include <stdlib.h>
+
+#include "console/output.h"
+#include "utility/strops.h"
+#include "utility/macros.h"
+
 Object* gpObjectRoot;
 Object* gpPlayer;
 
@@ -21,45 +27,45 @@ void CreateObjects()
 
     Object* guard = (Object*)malloc(sizeof(Object));
     *guard = (Object) {0, {Copy("city guard"), Copy("guard")}, Copy("Man who guards the city.")};
-    SetProperty(&guard->properties, OBJECT_PROPERTY_NPC, true);
+    SetProperty(&guard->properties, OP_NPC, true);
     AddToInventory(field, guard);
 
     Object* pouch = (Object*)malloc(sizeof(Object));
     *pouch = (Object) {0, {Copy("leather pouch"), Copy("pouch")}, Copy("It's a leather pouch.")};
-    SetProperty(&pouch->properties, OBJECT_PROPERTY_COLLECTABLE, true);
-    SetProperty(&pouch->properties, OBJECT_PROPERTY_CONTAINER, true);
-    SetProperty(&pouch->properties, OBJECT_PROPERTY_OPEN, true);
-    SetProperty(&pouch->properties, OBJECT_PROPERTY_VISIBLE_INVENTORY, true);
+    SetProperty(&pouch->properties, OP_COLLECTABLE, true);
+    SetProperty(&pouch->properties, OP_CONTAINER, true);
+    SetProperty(&pouch->properties, OP_OPEN, true);
+    SetProperty(&pouch->properties, OP_VISIBLE_INVENTORY, true);
     AddToInventory(field, pouch);
 
     Object* coin = (Object*)malloc(sizeof(Object));
     *coin = (Object) {0, {Copy("silver coin"), Copy("coin")}, Copy("It's a coin made of silver.")};
-    SetProperty(&coin->properties, OBJECT_PROPERTY_COLLECTABLE, true);
+    SetProperty(&coin->properties, OP_COLLECTABLE, true);
     AddToInventory(gpPlayer, coin);
     
     Object* chest = (Object*)malloc(sizeof(Object));
     *chest = (Object) {0, {Copy("wooden chest"), Copy("chest")}, Copy("It's a chest made of wood.")};
-    SetProperty(&chest->properties, OBJECT_PROPERTY_CONTAINER, true);
-    SetProperty(&chest->properties, OBJECT_PROPERTY_OPEN, true);
-    SetProperty(&chest->properties, OBJECT_PROPERTY_VISIBLE_INVENTORY, true);
+    SetProperty(&chest->properties, OP_CONTAINER, true);
+    SetProperty(&chest->properties, OP_OPEN, true);
+    SetProperty(&chest->properties, OP_VISIBLE_INVENTORY, true);
     AddToInventory(field, chest);
     
     Object* sword = (Object*)malloc(sizeof(Object));
     *sword = (Object) {0, {Copy("iron sword"), Copy("sword")}, Copy("It's an iron sword, its blade is dull.")};
-    SetProperty(&sword->properties, OBJECT_PROPERTY_COLLECTABLE, true);
+    SetProperty(&sword->properties, OP_COLLECTABLE, true);
     AddToInventory(gpPlayer, sword);
 
     Object* pouch2 = (Object*)malloc(sizeof(Object));
     *pouch2 = (Object) {0, {Copy("leather pouch"), Copy("pouch")}, Copy("It's a leather pouch.")};
-    SetProperty(&pouch2->properties, OBJECT_PROPERTY_COLLECTABLE, true);
-    SetProperty(&pouch2->properties, OBJECT_PROPERTY_CONTAINER, true);
-    SetProperty(&pouch2->properties, OBJECT_PROPERTY_OPEN, true);
-    SetProperty(&pouch2->properties, OBJECT_PROPERTY_VISIBLE_INVENTORY, true);
+    SetProperty(&pouch2->properties, OP_COLLECTABLE, true);
+    SetProperty(&pouch2->properties, OP_CONTAINER, true);
+    SetProperty(&pouch2->properties, OP_OPEN, true);
+    SetProperty(&pouch2->properties, OP_VISIBLE_INVENTORY, true);
     AddToInventory(field, pouch2);
 
     Object* coin2 = (Object*)malloc(sizeof(Object));
     *coin2 = (Object) {0, {Copy("gold coin"), Copy("coin")}, Copy("It's a coin made of gold.")};
-    SetProperty(&coin2->properties, OBJECT_PROPERTY_COLLECTABLE, true);
+    SetProperty(&coin2->properties, OP_COLLECTABLE, true);
     AddToInventory(gpPlayer, coin2);
 }
 
@@ -82,131 +88,23 @@ void FreeMemory(Object* pObj)
         free(pObj->description);
         pObj->description = NULL;
 
-        FreeMemory(GetFirstFromList(pObj->inventory));
-        pObj->inventory = NULL;
+        if(pObj->inventory)
+        {
+            LinkedListNode* invNode = GetFirstFromList(&pObj->inventory->list);
+            Object* invHead = CONTAINEROF(invNode, Object, list);
+            FreeMemory(invHead);
+            pObj->inventory = NULL;
+        }
 
-        FreeMemory(pObj->next);
-        pObj->next = NULL;
+        if(pObj->list.next)
+        {
+            Object* next = CONTAINEROF(pObj->list.next, Object, list);
+            FreeMemory(next);
+            pObj->list.next = NULL;
+        }
 
         free(pObj);
     }
-}
-
-void ListPush(Object* member, Object* obj)
-{
-    if(!member || !obj) return;
-    Object* first = GetFirstFromList(member);
-    first->prev = obj;
-    obj->next = first;
-    obj->prev = NULL;
-}
-
-void ListAppend(Object* member, Object* obj)
-{
-    if(!member || !obj) return;
-    Object* last = GetLastFromList(member);
-    last->next = obj;
-    obj->next = NULL;
-    obj->prev = last;
-}
-
-void ListInsert(Object* member, Object* obj)
-{
-    if(!member || !obj) return;
-    
-    if(member->next) member->next->prev = obj;
-    member->next = obj;
-    obj->next = member->next;
-    obj->prev = member;
-}
-
-void ListRemove(Object* obj)
-{
-    if(!obj) return;
-
-    if(obj->next) obj->next->prev = obj->prev;
-    if(obj->prev) obj->prev->next = obj->next;
-    obj->next = NULL;
-    obj->prev = NULL;
-}
-
-Object* GetFirstFromList(Object* member)
-{
-    if(!member) return NULL;
-    Object* pObj = member;
-    while(pObj->prev) pObj=pObj->prev;
-    return pObj;
-}
-
-Object* GetLastFromList(Object* member)
-{
-    if(!member) return NULL;
-    Object* pObj = member;
-    while(pObj->next) pObj=pObj->next;
-    return pObj;
-}
-
-int GetListPosition(Object* member)
-{
-    if(!member) return 0;
-    int position = 0;
-    while(member->prev)
-    {
-        member = member->prev;
-        position++;
-    }
-    return position;
-}
-
-int GetListLength(Object* member)
-{
-    if(!member) return 0;
-    int length = 1;
-    Object* p = member;
-    while(p->prev)
-    {
-        p = p->prev;
-        length++;
-    }
-    p = member;
-    while(p->next)
-    {
-        p = p->next;
-        length++;
-    }
-    return length;
-}
-
-Object* GetListPageRelative(Object* member, int offset)
-{
-    if(!member) return NULL;
-    int newPage = GetListPosition(member)/LIST_MAX_ROWS + offset;
-    int maxPage = (GetListLength(member)-1)/LIST_MAX_ROWS;
-    newPage =   (newPage < 0)       ? 0 :
-                (newPage > maxPage) ? maxPage :
-                                    newPage;
-    return GetListPage(member, newPage);
-}
-
-Object* GetListPageAligned(Object* member)
-{
-    int page = GetListPosition(member)/LIST_MAX_ROWS;
-    return GetListPage(member, page);
-}
-
-Object* GetListPage(Object* member, int page)
-{
-    if(!member) return NULL;
-    Object* p = member;
-    while(p->prev) p = p->prev;
-    int position = page*LIST_MAX_ROWS;
-    for(int i=0;
-        i<position && p->next != NULL;
-        i++)
-    {
-        p = p->next;
-    }
-    return p;
 }
 
 void ListObjects(Object* head, int limit)
@@ -216,8 +114,15 @@ void ListObjects(Object* head, int limit)
     while(pObj && (objectsListed < limit || limit == 0))
     {
         PrintObjectInfo(pObj);
-        pObj = pObj->next;
         objectsListed++;
+        if(pObj->list.next)
+        {
+            pObj = CONTAINEROF(pObj->list.next, Object, list);
+        }
+        else
+        {
+            pObj = NULL;
+        }
     }
 }
 
@@ -225,10 +130,10 @@ void PrintObjectInfo(Object* obj)
 {
     if(!obj) return;
     char* tag = GetLongestFromArray(obj->tags, OBJECT_MAX_TAGS);
-    if(HasProperty(obj->properties, OBJECT_PROPERTY_NEW))
+    if(HasProperty(obj->properties, OP_NEW))
     {
         Console_PrintColored("%s ", COLOR_BRIGHT_CYAN, tag);
-        SetProperty(&obj->properties, OBJECT_PROPERTY_NEW, false);
+        SetProperty(&obj->properties, OP_NEW, false);
     }
     else
     {
@@ -236,16 +141,18 @@ void PrintObjectInfo(Object* obj)
     }
 
     char* symbol = "\xB3 ";
-    if(HasProperty(obj->properties, OBJECT_PROPERTY_CONTAINER))
+    if(HasProperty(obj->properties, OP_CONTAINER))
     {
-        int items = GetListLength(obj->inventory);
+        int items = (obj->inventory) ?
+                    GetListLength(&obj->inventory->list) : 
+                    0;
         Console_PrintColored("[%d] ", COLOR_YELLOW, items);
     }
-    if(HasProperty(obj->properties, OBJECT_PROPERTY_PASSAGE))
+    if(HasProperty(obj->properties, OP_PASSAGE))
     {
         Console_PrintColored(symbol, COLOR_BLUE);
     }
-    if(HasProperty(obj->properties, OBJECT_PROPERTY_NPC))
+    if(HasProperty(obj->properties, OP_NPC))
     {
         Console_PrintColored(symbol, COLOR_CYAN);
     }
@@ -254,15 +161,16 @@ void PrintObjectInfo(Object* obj)
 
 void PrintPageInfo(Object* inventory)
 {
-    int currentPage = GetListPosition(inventory)/LIST_MAX_ROWS;
-    int totalPages = (GetListLength(inventory)-1)/LIST_MAX_ROWS;
+    if(!inventory) return;
+    int currentPage = GetListPosition(&inventory->list)/LIST_MAX_ROWS;
+    int totalPages = (GetListLength(&inventory->list)-1)/LIST_MAX_ROWS;
     if(totalPages) Console_PrintColored("[%d/%d]", COLOR_CYAN, currentPage+1, totalPages+1);
 }
 
 void PrintInfo()
 {
     Color headerColor = COLOR_CYAN;
-    if(HasProperty(gContext, CONTEXT_INVENTORY_OPEN))
+    if(HasProperty(gContext, GS_INVENTORY_OPEN))
     {
         Console_PrintColored("Inventory: ", headerColor);
         PrintPageInfo(gpPlayer->inventory);
@@ -274,7 +182,7 @@ void PrintInfo()
         }
     }
 
-    if(HasProperty(gContext, CONTEXT_CONTAINER_OPEN) && gpPlayer->target)
+    if(HasProperty(gContext, GS_CONTAINER_OPEN) && gpPlayer->target)
     {
         char* tag = Copy(GetLongestFromArray(gpPlayer->target->tags, OBJECT_MAX_TAGS));
         Capitalise(&tag);
@@ -312,9 +220,12 @@ void RemoveFromInventory(Object* obj)
 
     if(obj->parent->inventory == obj)
     {
-        obj->parent->inventory = (obj->next) ? obj->next : obj->prev; 
+        LinkedListNode* newInvNode = (obj->list.next) ?
+                                    obj->list.next :
+                                    obj->list.prev; 
+        obj->parent->inventory = CONTAINEROF(newInvNode, Object, list);
     }
-    ListRemove(obj);
+    ListRemove(&obj->list);
     obj->parent = NULL;
 }
 
@@ -323,13 +234,8 @@ void AddToInventory(Object* parent, Object* obj)
     if(!parent || !obj) return;
 
     obj->parent = parent;
-    if(parent->inventory == NULL)
-    {
-        parent->inventory = obj;
-        obj->next = NULL;
-        obj->prev = NULL;
-    }
-    else
+
+    if(parent->inventory)
     {
         /* 
         for(Object* pObj = GetFirstFromList(parent->inventory);
@@ -343,28 +249,38 @@ void AddToInventory(Object* parent, Object* obj)
             }
         }
         */
-       ListAppend(parent->inventory, obj);
+
+       ListAppend(&parent->inventory->list, &obj->list);
+    }
+    else
+    {
+        parent->inventory = obj;
+        obj->list.next = NULL;
+        obj->list.prev = NULL;
     }
 }
 
 bool PickUpItem(Object* parent, Object* obj)
 {
     if(!parent || !obj) return false;
-    if(!HasProperty(obj->properties, OBJECT_PROPERTY_COLLECTABLE))
+    if(!HasProperty(obj->properties, OP_COLLECTABLE))
         return false;
     Object* oldParent = obj->parent;
     RemoveFromInventory(obj);
     if(oldParent)
-        oldParent->inventory = GetListPageAligned(oldParent->inventory);
+    {
+        LinkedListNode* node = GetListPageAligned(&oldParent->inventory->list);
+        oldParent->inventory = CONTAINEROF(node, Object, list);
+    }
     AddToInventory(parent, obj);
-    SetProperty(&obj->properties, OBJECT_PROPERTY_NEW, true);
+    SetProperty(&obj->properties, OP_NEW, true);
     return true;
 }
 
 bool DropItem(Object* obj)
 {
     if(!obj) return false;
-    if(!HasProperty(obj->properties, OBJECT_PROPERTY_COLLECTABLE))
+    if(!HasProperty(obj->properties, OP_COLLECTABLE))
         return false;
     Object* container = obj->parent;
     if(!container) return false;
@@ -372,8 +288,12 @@ bool DropItem(Object* obj)
     if(!environment) return false;
 
     RemoveFromInventory(obj);
-    container->inventory = GetListPageAligned(container->inventory);
+    if(container->inventory)
+    {
+        LinkedListNode* node = GetListPageAligned(&container->inventory->list);
+        container->inventory = CONTAINEROF(node, Object, list);
+    }
     AddToInventory(environment, obj);
-    SetProperty(&obj->properties, OBJECT_PROPERTY_NEW, true);
+    SetProperty(&obj->properties, OP_NEW, true);
     return true;
 }

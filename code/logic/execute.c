@@ -1,59 +1,37 @@
 #include "execute.h"
 
+#include "console/output.h"
+#include "utility/linked_list.h"
+#include "utility/macros.h"
+
 bool ExecuteClear()
 {
     Console_Clear();
-    return true;
 }
 
 bool ExecuteQuit()
 {
-    SetProperty(&gContext, CONTEXT_SHUTDOWN, true);
-    return false;
+    SetProperty(&gContext, GS_SHUTDOWN, true);
 }
 
 bool ExecuteHelp()
 {
-    Console_PrintColored("Available commands:\n", COLOR_CYAN);
-    for(int i=0; i<COMMANDS_MAX_COUNT; i++)
-    {
-        if(gCommands[i].pattern
-            && HasProperties(gContext, gCommands[i].contextConditions))
-        {
-            Console_Print("%s ", gCommands[i].pattern);
-            if(gCommands[i].details) 
-            {
-                Console_PrintColored(gCommands[i].details, COLOR_BRIGHT_BLACK);
-            }
-            Console_Print("\n");
-        }
-    }
-    Console_Print("\n");
-    Color disclaimerColor = COLOR_BRIGHT_YELLOW;
-    Console_PrintColored("Disclaimer!\n", disclaimerColor);
-    Console_PrintColored("You can put an ordinal (e.g. 'second' or '3th')\n", disclaimerColor);
-    Console_PrintColored("before the <name> to implicitly pick an object\n", disclaimerColor);
-    Console_PrintColored("(instead of the first matching one)\n", disclaimerColor);
-    return false;
 }
 
 bool ExecuteLookAt()
 {
-    Argument arg = GetArgumentOfType(ARG_TYPE_TAG, 0);
-    if(arg.type == ARG_TYPE_TAG && arg.p != NULL)
-    {
-        Object* obj = (Object*)arg.p;
-        Console_Print("%s\n", obj->description);
-    }
-    return false;
 }
 
 bool ExecuteInventory()
 {
-    if( !HasProperty(gContext, CONTEXT_INVENTORY_OPEN) )
+    if( !HasProperty(gContext, GS_INVENTORY_OPEN) )
     {
-        SetProperty(&gContext, CONTEXT_INVENTORY_OPEN, true);
-        gpPlayer->inventory = GetFirstFromList(gpPlayer->inventory);
+        SetProperty(&gContext, GS_INVENTORY_OPEN, true);
+        if(gpPlayer->inventory)
+        {
+            LinkedListNode* node = GetFirstFromList(&gpPlayer->inventory->list);
+            gpPlayer->inventory = CONTAINEROF(node, Object, list);
+        }
         return true;
     }
     else
@@ -65,6 +43,7 @@ bool ExecuteInventory()
 
 static bool ExecuteNext()
 {
+    /*
     Argument arg0 = GetArgumentOfType(ARG_TYPE_TAG, 0);
     Argument arg1 = GetArgumentOfType(ARG_TYPE_PROPERTY, 0);
     if(arg0.type == ARG_TYPE_TAG && arg0.p)
@@ -73,14 +52,20 @@ static bool ExecuteNext()
             && !HasProperty(gContext, arg1.property))
         return false;
 
-        arg0.p->inventory = GetListPageRelative(arg0.p->inventory, 1);
+        if(arg0.p->inventory)
+        {
+            LinkedListNode* node = GetListPageRelative(&arg0.p->inventory->objList, 1);
+            arg0.p->inventory = CONTAINEROF(node, Object, objList);
+        }
         return true;
     }
     return false;
+    */
 }
 
 static bool ExecutePrev()
 {
+    /*
     Argument arg0 = GetArgumentOfType(ARG_TYPE_TAG, 0);
     Argument arg1 = GetArgumentOfType(ARG_TYPE_PROPERTY, 0);
     if(arg0.type == ARG_TYPE_TAG && arg0.p)
@@ -89,14 +74,20 @@ static bool ExecutePrev()
             && !HasProperty(gContext, arg1.property))
         return false;
 
-        arg0.p->inventory = GetListPageRelative(arg0.p->inventory, -1);
+        if(arg0.p->inventory)
+        {
+            LinkedListNode* node = GetListPageRelative(&arg0.p->inventory->objList, -1);
+            arg0.p->inventory = CONTAINEROF(node, Object, objList);
+        }
         return true;
     }
     return false;
+    */
 }
 
 static bool ExecutePage()
 {
+    /*
     Argument argT = GetArgumentOfType(ARG_TYPE_TAG, 0);
     Argument argP = GetArgumentOfType(ARG_TYPE_PROPERTY, 0);
     if(argT.type == ARG_TYPE_TAG && argT.p)
@@ -110,74 +101,98 @@ static bool ExecutePage()
         Argument argO = GetArgumentOfType(ARG_TYPE_ORDINAL, 0);
         if(argI.type == ARG_TYPE_INT) page = argI.value - 1;
         if(argO.type == ARG_TYPE_ORDINAL) page = argO.value;
-        argT.p->inventory = GetListPage(argT.p->inventory, page);
+        if(argT.p->inventory)
+        {
+            LinkedListNode* node = GetListPage(&argT.p->inventory->objList, page);
+            argT.p->inventory = CONTAINEROF(node, Object, objList);
+        }
         return true;
     }
     return false;
+    */
 }
 
 bool ExecuteInventoryNext()
 {
+    /*
     AppendArgument((Argument){ ARG_TYPE_TAG, gpPlayer});
-    AppendArgument((Argument){ ARG_TYPE_PROPERTY, .property=CONTEXT_INVENTORY_OPEN});
+    AppendArgument((Argument){ ARG_TYPE_PROPERTY, .property=GS_INVENTORY_OPEN});
     return ExecuteNext();
+    */
 }
 
 bool ExecuteInventoryPrev()
 {
+    /*
     AppendArgument((Argument){ ARG_TYPE_TAG, gpPlayer});
-    AppendArgument((Argument){ ARG_TYPE_PROPERTY, .property=CONTEXT_INVENTORY_OPEN});
+    AppendArgument((Argument){ ARG_TYPE_PROPERTY, .property=GS_INVENTORY_OPEN});
     return ExecutePrev();
+    */
 }
 
 bool ExecuteInventoryPage()
 {
+    /*
     AppendArgument((Argument){ ARG_TYPE_TAG, gpPlayer});
-    AppendArgument((Argument){ ARG_TYPE_PROPERTY, .property=CONTEXT_INVENTORY_OPEN});
+    AppendArgument((Argument){ ARG_TYPE_PROPERTY, .property=GS_INVENTORY_OPEN});
     return ExecutePage();
+    */
 }
 
 bool ExecuteContainerNext()
 {
+    /*
     AppendArgument((Argument){ ARG_TYPE_TAG, gpPlayer->target});
-    AppendArgument((Argument){ ARG_TYPE_PROPERTY, .property=CONTEXT_CONTAINER_OPEN});
+    AppendArgument((Argument){ ARG_TYPE_PROPERTY, .property=GS_CONTAINER_OPEN});
     return ExecuteNext();
+    */
 }
 
 bool ExecuteContainerPrev()
 {
+    /*
     AppendArgument((Argument){ ARG_TYPE_TAG, gpPlayer->target});
-    AppendArgument((Argument){ ARG_TYPE_PROPERTY, .property=CONTEXT_CONTAINER_OPEN});
+    AppendArgument((Argument){ ARG_TYPE_PROPERTY, .property=GS_CONTAINER_OPEN});
     return ExecutePrev();
+    */
 }
 
 bool ExecuteContainerPage()
 {
+    /*
     AppendArgument((Argument){ ARG_TYPE_TAG, gpPlayer->target});
-    AppendArgument((Argument){ ARG_TYPE_PROPERTY, .property=CONTEXT_CONTAINER_OPEN});
+    AppendArgument((Argument){ ARG_TYPE_PROPERTY, .property=GS_CONTAINER_OPEN});
     return ExecutePage();
+    */
 }
 
 bool ExecuteLocationNext()
 {
+    /*
     AppendArgument((Argument){ ARG_TYPE_TAG, gpPlayer->parent});
     return ExecuteNext();
+    */
 }
 
 bool ExecuteLocationPrev()
 {
+    /*
     AppendArgument((Argument){ ARG_TYPE_TAG, gpPlayer->parent});
     return ExecutePrev();
+    */
 }
 
 bool ExecuteLocationPage()
 {
+    /*
     AppendArgument((Argument){ ARG_TYPE_TAG, gpPlayer->parent});
     return ExecutePage();
+    */
 }
 
 bool ExecutePickUp()
 {
+    /*
     Object* obj = GetArgumentOfType(ARG_TYPE_TAG, 0).p;
 
     bool success = PickUpItem(gpPlayer, obj);
@@ -191,11 +206,13 @@ bool ExecutePickUp()
     }
 
     return success;
+    */
 }
 
 // NOTE(sokus): Same to ExecutePickUp
 bool ExecuteDrop()
 {
+    /*
     Object* obj = GetArgumentOfType(ARG_TYPE_TAG, 0).p;
 
     bool success = DropItem(obj);
@@ -209,23 +226,29 @@ bool ExecuteDrop()
     }
 
     return success;
+    */
 }
 
 bool ExecuteOpen()
 {
+    /*
     Object* obj = GetArgumentOfType(ARG_TYPE_TAG, 0).p;
 
     if(obj)
     {
-        if( HasProperty(obj->properties, OBJECT_PROPERTY_CONTAINER) )
+        if( HasProperty(obj->properties, OP_CONTAINER) )
         {
-            bool alreadyInContainer = HasProperty(gContext, CONTEXT_CONTAINER_OPEN);
+            bool alreadyInContainer = HasProperty(gContext, GS_CONTAINER_OPEN);
             bool noTarget = !gpPlayer->target;
             if( noTarget || alreadyInContainer)
             {
-                SetProperty(&gContext, CONTEXT_CONTAINER_OPEN, true);
+                SetProperty(&gContext, GS_CONTAINER_OPEN, true);
                 gpPlayer->target = obj;
-                obj->inventory = GetFirstFromList(obj->inventory);
+                if(obj->inventory)
+                {
+                    LinkedListNode* node = GetFirstFromList(&obj->inventory->objList);
+                    obj->inventory = CONTAINEROF(node, Object, objList);
+                }
                 return true;
             }
             else
@@ -243,11 +266,13 @@ bool ExecuteOpen()
         }
     }
     return false;
+    */
 }
 
 // NOTE(sokus): Same to ExecutePickUp
 bool ExecuteMoveToInventory()
 {
+    /*
     Object* obj = GetArgumentOfType(ARG_TYPE_TAG, 0).p;
 
     bool success = PickUpItem(gpPlayer, obj);
@@ -261,16 +286,18 @@ bool ExecuteMoveToInventory()
     }
 
     return success;
+    */
 }
 
 bool ExecuteMoveToContainer()
 {
+    /*
     Object* obj0 = GetArgumentOfType(ARG_TYPE_TAG, 0).p;
     Object* obj1 = GetArgumentOfType(ARG_TYPE_TAG, 1).p;
     if(!obj0 || !obj1) return false;
 
     bool success = false;
-    bool isContainer = HasProperty(obj1->properties, OBJECT_PROPERTY_CONTAINER);
+    bool isContainer = HasProperty(obj1->properties, OP_CONTAINER);
     if(isContainer)
     {
         success = PickUpItem(obj1, obj0);
@@ -292,35 +319,41 @@ bool ExecuteMoveToContainer()
         free(tag);
     }
     return success;
+    */
 }
 
 bool ExecuteClose()
 {
-    if(HasProperty(gContext, CONTEXT_CONTAINER_OPEN))
+    /*
+    if(HasProperty(gContext, GS_CONTAINER_OPEN))
         return ExecuteCloseContainer();
-    else if(HasProperty(gContext, CONTEXT_INVENTORY_OPEN))
+    else if(HasProperty(gContext, GS_INVENTORY_OPEN))
         return ExecuteCloseInventory();
     return false;
+    */
 }
 
 bool ExecuteCloseInventory()
 {
-    if(HasProperty(gContext, CONTEXT_INVENTORY_OPEN))
+    /*
+    if(HasProperty(gContext, GS_INVENTORY_OPEN))
     {
-        SetProperty(&gContext, CONTEXT_INVENTORY_OPEN, false);
+        SetProperty(&gContext, GS_INVENTORY_OPEN, false);
         return true;
     }
     return false;
+    */
 }
 
 bool ExecuteCloseContainer()
 {
-    if(HasProperty(gContext, CONTEXT_CONTAINER_OPEN))
+    /*
+    if(HasProperty(gContext, GS_CONTAINER_OPEN))
     {
         bool hasTarget = gpPlayer->target != NULL;
         Object* parent = hasTarget ? gpPlayer->target->parent : NULL;
         bool targetInContainer =
-            parent && HasProperty(parent->properties, OBJECT_PROPERTY_CONTAINER);
+            parent && HasProperty(parent->properties, OP_CONTAINER);
         bool containerIsPlayerOrEnv = parent == gpPlayer || parent == gpPlayer->parent;
 
         if(hasTarget && targetInContainer && !containerIsPlayerOrEnv)
@@ -329,26 +362,30 @@ bool ExecuteCloseContainer()
         }
         else
         {
-            SetProperty(&gContext, CONTEXT_CONTAINER_OPEN, false);
+            SetProperty(&gContext, GS_CONTAINER_OPEN, false);
             gpPlayer->target = NULL;
         }
         return true;
     }
     return false;
+    */
 }
 bool ExecuteDebug()
 {   
-    bool debug = HasProperty(gContext, CONTEXT_DEBUG_MODE);
-    SetProperty(&gContext, CONTEXT_DEBUG_MODE, !debug);
+    /*
+    bool debug = HasProperty(gContext, GS_DEBUG);
+    SetProperty(&gContext, GS_DEBUG, !debug);
     if(!debug)
         Console_PrintColored("Debug mode enabled.\n", COLOR_BRIGHT_RED);
     else
         Console_PrintColored("Debug mode disabled.\n", COLOR_BRIGHT_RED);
     return false;
+    */
 }
 
 bool ExecuteListProperties()
 {
+    /*
     Object* obj = GetArgumentOfType(ARG_TYPE_TAG, 0).p;
     if(obj)
     {
@@ -357,10 +394,12 @@ bool ExecuteListProperties()
         PrintProperties(obj->properties);
     }
     return false;
+    */
 }
 
 bool ExecuteSetProperty()
 {
+    /*
     Object* obj = GetArgumentOfType(ARG_TYPE_TAG, 0).p;
     Property property = GetArgumentOfType(ARG_TYPE_PROPERTY, 0).value;
     bool value = GetArgumentOfType(ARG_TYPE_BOOL, 0).value != 0;
@@ -381,4 +420,5 @@ bool ExecuteSetProperty()
         }
     }
     return false;
+    */
 }

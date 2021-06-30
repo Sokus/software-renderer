@@ -3,54 +3,51 @@
 
 #include <stdbool.h>
 
-#include "console/output.h"
 
 typedef enum Property
 {
     // GAME STATE
-    CONTEXT_DEBUG_MODE,
-    CONTEXT_INVENTORY_OPEN,
-    CONTEXT_CONTAINER_OPEN,
-    CONTEXT_SHUTDOWN,
+    GS_DEBUG,
+    GS_INVENTORY_OPEN,
+    GS_CONTAINER_OPEN,
+    GS_SHUTDOWN,
 
     // OBJECTS
-    OBJECT_PROPERTY_COLLECTABLE,
-    OBJECT_PROPERTY_VISIBLE_INVENTORY,
-
-    OBJECT_PROPERTY_CONTAINER,
-    OBJECT_PROPERTY_PASSAGE,
-    OBJECT_PROPERTY_NPC,
-
-    OBJECT_PROPERTY_OPEN,
-    OBJECT_PROPERTY_NEW,
+    OP_COLLECTABLE,
+    OP_VISIBLE_INVENTORY,
+    OP_CONTAINER,
+    OP_PASSAGE,
+    OP_NPC,
+    OP_OPEN,
+    OP_NEW,
 
     PROPERTY_MAX
 } Property;
 
 static char* gPropertyNames[] = 
 {
-    "CONTEXT_DEBUG_MODE",
-    "CONTEXT_INVENTORY_OPEN",
-    "CONTEXT_CONTAINER_OPEN",
-    "CONTEXT_SHUTDOWN",
-    "OBJECT_PROPERTY_COLLECTABLE",
-    "OBJECT_PROPERTY_VISIBLE_INVENTORY",
-    "OBJECT_PROPERTY_CONTAINER",
-    "OBJECT_PROPERTY_PASSAGE",
-    "OBJECT_PROPERTY_NPC",
-    "OBJECT_PROPERTY_OPEN",
-    "OBJECT_PROPERTY_NEW",
+    "GS_DEBUG",
+    "GS_INVENTORY_OPEN",
+    "GS_CONTAINER_OPEN",
+    "GS_SHUTDOWN",
+    "OP_COLLECTABLE",
+    "OP_VISIBLE_INVENTORY",
+    "OP_CONTAINER",
+    "OP_PASSAGE",
+    "OP_NPC",
+    "OP_OPEN",
+    "OP_NEW",
     "PROPERTY_MAX"
 };
 
-typedef unsigned long long PropertyField;
+typedef unsigned long long PropertyBitField;
 
-bool HasProperty(PropertyField properties, Property property);
-void SetProperty(PropertyField* properties, Property property, bool value);
+bool HasProperty(PropertyBitField properties, Property property);
+void SetProperty(PropertyBitField* properties, Property property, bool value);
 
-bool HasProperties(PropertyField field, PropertyField properties);
+bool HasProperties(PropertyBitField field, PropertyBitField properties);
 
-void PrintProperties(PropertyField properties);
+void PrintProperties(PropertyBitField properties);
 void PrintPropertyName(Property property);
 
 #endif

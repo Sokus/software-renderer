@@ -10,7 +10,7 @@ set files=..\code\*.c ^
 ..\code\logic\*.c ^
 ..\code\objects\*.c ^
 ..\code\parser\*.c ^
-..\code\utility*.c ^
+..\code\utility\*.c ^
 ..\code\platform\windows\*_WIN32.c
 gcc %files% -o summoned -I..\code
 

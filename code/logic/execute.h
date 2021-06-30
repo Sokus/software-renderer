@@ -2,15 +2,12 @@
 #define EXECUTE_H
 
 #include "properties.h"
-#include "parser/argument.h"
-#include "parser/parsexec.h"
 #include "objects/object.h"
-#include "console/output.h"
 
 extern Object* gpObjectRoot;
 extern Object* gpPlayer;
 
-extern PropertyField gContext;
+extern PropertyBitField gContext;
 
 bool ExecuteClear();
 bool ExecuteQuit();

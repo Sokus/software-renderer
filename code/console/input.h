@@ -1,6 +1,8 @@
 #ifndef INPUT_H
 #define INPUT_H
 
-char GetChar();
+#include "console/keycode.h"
+
+KeyCode GetInput();
 
 #endif

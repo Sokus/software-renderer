@@ -4,6 +4,8 @@
 #include <stdbool.h>
 
 #include "objects/object.h"
+#include "utility/array.h"
+#include "properties.h"
 
 typedef enum Distance
 {
@@ -11,14 +13,15 @@ typedef enum Distance
     DISTANCE_INVENTORY,
     DISTANCE_LOCATION,
     DISTANCE_NEAR,
-    DISTANCE_NEAR_CONTAINED,
     DISTANCE_TARGET,
+    DISTANCE_TARGET_CONTAINED,
     DISTANCE_ABSENT,
     DISTANCE_MAX
 } Distance;
 
-// Distance GetDistance(const Object* from, const Object* to);
 int GetDepth(Object* container, Object* obj);
 bool IsInRange(Distance value, Distance from, Distance to);
+
+DynamicArray GetObjectsInDistance(PropertyBitField distanceFlags);
 
 #endif

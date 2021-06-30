@@ -1,10 +1,13 @@
-#include "console/input.h"
+#ifdef unix
+
+#include "input.h"
 
 #include <stdio.h>
 #include <unistd.h>
 #include <termios.h>
 
-char GetChar()
+
+int GetInput()
 {
     char buf = 0;
     struct termios old = {0};
@@ -25,3 +28,5 @@ char GetChar()
         perror("tcsetattr ~ICANON");
     return buf;
  }
+
+#endif // unix

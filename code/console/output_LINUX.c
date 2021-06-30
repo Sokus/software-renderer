@@ -1,3 +1,5 @@
+#ifdef LINUX
+
 #include "console/output.h"
 
 void Console_SetDefaultColor(Color color)
@@ -47,3 +49,5 @@ void Console_Clear()
 {
     printf("\e[H\e[J");
 }
+
+#endif // LINUX
