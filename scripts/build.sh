@@ -12,7 +12,7 @@ pushd ./build
 
 exec > /dev/tty
 pwd
-gcc -o summoned\
+gcc -o  summoned\
  ../code/console/*.c\
  ../code/logic/*.c\
  ../code/objects/*.c\
