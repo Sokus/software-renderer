@@ -24,7 +24,7 @@ typedef struct Win32GameCode
     HMODULE game_code_dll;
     FILETIME last_dll_write_time;
     
-    GameUpdateAndRenderType *UpdateAndRender;
+    GameUpdateAndRenderType *update_and_render;
     
     B32 is_valid;
 } Win32GameCode;

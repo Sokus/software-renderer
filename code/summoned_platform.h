@@ -17,7 +17,6 @@
 #include <stddef.h>
 #include <stdint.h>
 
-typedef size_t size_t;
 
 typedef int8_t I8;
 typedef int16_t I16;
@@ -36,18 +35,23 @@ typedef uint32_t B32;
 typedef float F32;
 typedef float F64;
 
+typedef size_t SizeType;
+typedef size_t MemoryIndex;
+
 //~NOTE(sokus): macros
 
 #define STATEMENT(statement) do { statement } while (0)
 #define ASSERT_BREAK() (*(int *)0 = 0)
 
 #if SUMMONED_DEBUG
-# define ASSERT(expression) STATEMENT( if (expression) { ASSERT_BREAK(); } ) 
+# define ASSERT(expression) STATEMENT( if (!(expression)) { ASSERT_BREAK(); } ) 
 #else
 # define ASSERT(expression)
 #endif
 
 #define INVALID_CODE_PATH ASSERT(!"Invalid Code Path")
+
+#define UNUSED(argument) (void)(argument)
 
 #define KILOBYTES(value) ((value)*1024LL)
 #define MEGABYTES(value) (KILOBYTES(value)*1024LL)
@@ -60,7 +64,6 @@ typedef float F64;
 #define MAX(a, b) (((a)>(b)) ? (a) : (b))
 #define CLAMP(a, x, b) (((x)<(a))?(a):\
 ((x)>(b))?(b):(x))
-
 #define CLAMP_TOP(a, b) MIN(a, b)
 #define CLAMP_BOT(a, b) MAX(a, b)
 
@@ -98,7 +101,37 @@ typedef struct GameButtonState
 
 typedef struct GameControllerInput
 {
-    B32
+    B32 is_connected;
+    B32 is_analog;
+    F32 stick_average_x;
+    F32 stick_average_y;
+    
+    union
+    {
+        GameButtonState buttons[12];
+        struct
+        {
+            GameButtonState move_up;
+            GameButtonState move_down;
+            GameButtonState move_left;
+            GameButtonState move_right;
+            
+            GameButtonState action_up;
+            GameButtonState action_down;
+            GameButtonState action_left;
+            GameButtonState action_right;
+            
+            GameButtonState left_bumper;
+            GameButtonState right_bumper;
+            
+            GameButtonState select;
+            GameButtonState start;
+            
+            // NOTE(casey): All buttons must be added above this line
+            
+            GameButtonState terminator;
+        };
+    };
 } GameControllerInput;
 
 typedef struct GameInput
@@ -106,7 +139,7 @@ typedef struct GameInput
     GameButtonState mouse_buttons[5];
     I32 mouse_x, mouse_y, mouse_z;
     
-    F32 dtForFrame;
+    F32 dt_for_frame;
     
     GameControllerInput controllers[5];
 } GameInput;
@@ -114,17 +147,15 @@ typedef struct GameInput
 GameControllerInput *
 GetController(GameInput *input, unsigned int controller_index)
 {
-    ASSERT(controller_index < ARRAY_COUNT(input->controllers));
+    U32 count = ARRAY_COUNT(input->controllers);
+    ASSERT(controller_index < count);
     
     GameControllerInput *result = &input->controllers[controller_index];
     return result;
 }
 
-
-#define GAME_UPDATE_AND_RENDER_SIG(name) void name(GameOffscreenBuffer *buffer)
-typedef GAME_UPDATE_AND_RENDER_SIG(GameUpdateAndRenderType);
-
-
-
+typedef void GameUpdateAndRenderType(GameMemory *memory,
+                                     GameInput *input,
+                                     GameOffscreenBuffer *buffer);
 
 #endif //SUMMONED_PLATFORM_H

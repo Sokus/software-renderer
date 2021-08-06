@@ -3,10 +3,8 @@
 :: Flags
 set macros=-D SUMMONED_DEBUG=1
 set common=-g -O0
-set warnings_on=-Wall -Wextra -Werror -pedantic -std=c11 -Werror-implicit-function-declaration -Wconversion
-set warnings_off=-Wno-format -Wno-unused-function -Wno-unused-parameter -Wno-unused-variable
-set warnings_off=%warnings_off% -Wno-cast-function-type -Wno-unused-but-set-variable
-set flags=%macros% %common% %warnings_on% %warnings_off%
+set warnings=-Wall -Wextra -Werror -std=c11 -pedantic
+set flags=%macros% %common% %warnings%
 
 set libs=-luser32 -lgdi32 -lwinmm
 
@@ -23,6 +21,9 @@ set game_compile=gcc %root%code\summoned.c -shared -o %dll% %flags% %libs%
 if not exist build mkdir build
 pushd build
 
+:: Compile the dynamic library
+%game_compile%
+
 :: Check if exe is running
 set recompile=1
 if exist %exe% (tasklist | find "%exe%">nul: && set recompile=0)
@@ -30,8 +31,6 @@ if exist %exe% (tasklist | find "%exe%">nul: && set recompile=0)
 :: Recompile exe if possible
 if %recompile%==1 (%win32_compile%) else ( echo %exe% is currently running )
 
-:: Compile the dynamic library
-%game_compile%
 
 :: Exit build directory
 popd 
