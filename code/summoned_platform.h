@@ -14,9 +14,9 @@
 #define local_persist static
 
 //~NOTE(sokus): types
+#include <stdbool.h>
 #include <stddef.h>
 #include <stdint.h>
-
 
 typedef int8_t I8;
 typedef int16_t I16;
@@ -28,20 +28,18 @@ typedef uint16_t U16;
 typedef uint32_t U32;
 typedef uint64_t U64;
 
-typedef uint32_t B32;
-#define TRUE 1
-#define FALSE 0
-
 typedef float F32;
 typedef float F64;
 
-typedef size_t SizeType;
+typedef _Bool Bool;
+
 typedef size_t MemoryIndex;
 
 //~NOTE(sokus): macros
 
 #define STATEMENT(statement) do { statement } while (0)
-#define ASSERT_BREAK() (*(int *)0 = 0)
+//#define ASSERT_BREAK() (*(int *)0 = 0)
+#define ASSERT_BREAK() (*((char*)-1) = 'x')
 
 #if SUMMONED_DEBUG
 # define ASSERT(expression) STATEMENT( if (!(expression)) { ASSERT_BREAK(); } ) 
@@ -67,10 +65,6 @@ typedef size_t MemoryIndex;
 #define CLAMP_TOP(a, b) MIN(a, b)
 #define CLAMP_BOT(a, b) MAX(a, b)
 
-
-
-//~NOTE(sokus): Services that the game provides to the platform layer
-
 typedef struct GameOffscreenBuffer
 {
     // NOTE(casey): Pixels are always 32-bits wide, Memory Order BB GG RR XX
@@ -83,7 +77,7 @@ typedef struct GameOffscreenBuffer
 
 typedef struct GameMemory
 {
-    B32 is_initialized;
+    Bool is_initialized;
     
     U64 permanent_storage_size;
     void *permanent_storage; // NOTE(casey): REQUIRED to be cleared to zero at startup
@@ -92,17 +86,16 @@ typedef struct GameMemory
     void *transient_storage; // NOTE(casey): REQUIRED to be cleared to zero at startup
 } GameMemory;
 
-
 typedef struct GameButtonState
 {
     int half_transition_count;
-    B32 ended_down;
+    Bool ended_down;
 } GameButtonState;
 
 typedef struct GameControllerInput
 {
-    B32 is_connected;
-    B32 is_analog;
+    Bool is_connected;
+    Bool is_analog;
     F32 stick_average_x;
     F32 stick_average_y;
     
@@ -136,12 +129,11 @@ typedef struct GameControllerInput
 
 typedef struct GameInput
 {
+    GameControllerInput controllers[5];
     GameButtonState mouse_buttons[5];
     I32 mouse_x, mouse_y, mouse_z;
     
     F32 dt_for_frame;
-    
-    GameControllerInput controllers[5];
 } GameInput;
 
 GameControllerInput *
@@ -154,8 +146,64 @@ GetController(GameInput *input, unsigned int controller_index)
     return result;
 }
 
+typedef struct Font
+{
+    int glyph_w;
+    int glyph_h;
+    int glyphs_per_row;
+    int glyphs_per_col;
+    int w;
+    int h;
+    int pitch;
+    U32 *data;
+} Font;
+
+typedef struct FontPack
+{
+    char *name;
+    int size;
+    
+    Font regular;
+    Font bold;
+} FontPack;
+
+void
+CatStrings(size_t source_a_count, char *source_a,
+           size_t source_b_count, char *source_b,
+           size_t dest_count, char *dest)
+{
+    for(U32 index = 0;
+        index < source_a_count && index < dest_count;
+        ++index)
+    {
+        *dest++ = *source_a++;
+    }
+    
+    for(U32 index = 0;
+        index < source_b_count && index + source_a_count < dest_count;
+        ++index)
+    {
+        *dest++ = *source_b++;
+    }
+    
+    *dest = 0;
+}
+
+U32
+StringLength(char *string)
+{
+    int count = 0;
+    while(*string++)
+    {
+        ++count;
+    }
+    
+    return count;
+}
+
 typedef void GameUpdateAndRenderType(GameMemory *memory,
                                      GameInput *input,
+                                     FontPack *font_pack,
                                      GameOffscreenBuffer *buffer);
 
 #endif //SUMMONED_PLATFORM_H

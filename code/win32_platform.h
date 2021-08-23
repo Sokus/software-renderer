@@ -26,7 +26,7 @@ typedef struct Win32GameCode
     
     GameUpdateAndRenderType *update_and_render;
     
-    B32 is_valid;
+    Bool is_valid;
 } Win32GameCode;
 
 typedef struct Win32State
@@ -38,6 +38,12 @@ typedef struct Win32State
     char *one_past_last_exe_path_slash;
 } Win32State;
 
+typedef enum FontRasterFlags
+{
+    FONT_RASTER_FLAG_RASTER_FONT = 1,
+    FONT_RASTER_FLAG_DONT_MAP_UNICODE = 2,
+    FONT_RASTER_FLAG_BOLD = 4
+} FontRasterFlags;
 
 
 #endif //WIN32_SUMMONED_H

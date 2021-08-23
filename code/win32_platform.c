@@ -1,19 +1,18 @@
 #include "summoned_platform.h"
 
 #include <windows.h>
-#include <stdio.h>
-
 #include <xinput.h>
 
 #include "win32_platform.h"
 
-global B32 global_running;
-global B32 global_in_focus;
+#include "win32_font_maps.c"
+
+global Bool global_running;
+global Bool global_in_focus;
 global Win32OffscreenBuffer global_backbuffer;
 global I64 global_perf_count_frequency;
-global B32 debug_global_show_cursor;
+global Bool debug_global_show_cursor;
 global WINDOWPLACEMENT global_window_position = { .length=sizeof(global_window_position) };
-
 
 typedef DWORD WINAPI XInputGetStateType(DWORD dwUserIndex, XINPUT_STATE *pState);
 DWORD WINAPI XInputGetStateStub(DWORD dwUserIndex, XINPUT_STATE *pState)
@@ -51,47 +50,11 @@ Win32GetSecondsElapsed(LARGE_INTEGER start, LARGE_INTEGER end)
 }
 
 internal void
-CatStrings(SizeType source_a_count, char *source_a,
-           SizeType source_b_count, char *source_b,
-           SizeType dest_count, char *dest)
-{
-    // TODO(casey): Dest bounds checking!
-    
-    for(SizeType index = 0;
-        index < source_a_count && index < dest_count;
-        ++index)
-    {
-        *dest++ = *source_a++;
-    }
-    
-    for(SizeType index = 0;
-        index < source_b_count && index + source_a_count < dest_count;
-        ++index)
-    {
-        *dest++ = *source_b++;
-    }
-    
-    *dest = 0;
-}
-
-internal int
-StringLength(char *string)
-{
-    int count = 0;
-    while(*string++)
-    {
-        ++count;
-    }
-    
-    return count;
-}
-
-internal void
 Win32InitEXEPath(Win32State *state)
 {
     DWORD size_of_filename = GetModuleFileNameA(0, state->exe_path, sizeof(state->exe_path));
     state->one_past_last_exe_path_slash = state->exe_path;
-    for(SizeType offset = 0;
+    for(U32 offset = 0;
         *(state->exe_path+offset) && offset < size_of_filename;
         ++offset)
     {
@@ -105,10 +68,10 @@ Win32InitEXEPath(Win32State *state)
 internal void
 Win32BuildEXEPathFilename(Win32State *state, char *filename, int dest_count, char *dest)
 {
-    SizeType path_count = (SizeType)(state->one_past_last_exe_path_slash - state->exe_path);
+    size_t path_count = (state->one_past_last_exe_path_slash - state->exe_path);
     CatStrings(path_count, state->exe_path,
-               (SizeType)StringLength(filename), filename,
-               (SizeType)dest_count, dest);
+               StringLength(filename), filename,
+               dest_count, dest);
 }
 
 FILETIME
@@ -126,27 +89,32 @@ Win32GetLastWriteTime(char *filename)
 }
 
 internal Win32GameCode
-Win32LoadGameCode(char *source_dll_name, char *temp_dll_name)
+Win32LoadGameCode(char *source_dll_name, char *temp_dll_name, char *lock_name)
 {
     Win32GameCode result = {0};
     
-    result.last_dll_write_time = Win32GetLastWriteTime(source_dll_name);
-    
-    CopyFile(source_dll_name, temp_dll_name, FALSE);
-    
-    result.game_code_dll = LoadLibraryA(temp_dll_name);
-    if(result.game_code_dll)
+    WIN32_FILE_ATTRIBUTE_DATA ignored;
+    if(!GetFileAttributesEx(lock_name, GetFileExInfoStandard, &ignored))
     {
-        union GameUpdateAndRenderUnion
+        result.last_dll_write_time = Win32GetLastWriteTime(source_dll_name);
+        
+        CopyFile(source_dll_name, temp_dll_name, false);
+        
+        result.game_code_dll = LoadLibraryA(temp_dll_name);
+        
+        if(result.game_code_dll)
         {
-            GameUpdateAndRenderType *p1;
-            FARPROC p2;
-        } game_update_and_render_union = {0};
-        
-        game_update_and_render_union.p2 = GetProcAddress(result.game_code_dll, "GameUpdateAndRender");
-        result.update_and_render = game_update_and_render_union.p1;
-        
-        result.is_valid = (result.update_and_render) != 0;
+            union GameUpdateAndRenderUnion
+            {
+                GameUpdateAndRenderType *p1;
+                FARPROC p2;
+            } game_update_and_render_union = {0};
+            
+            game_update_and_render_union.p2 = GetProcAddress(result.game_code_dll, "GameUpdateAndRender");
+            result.update_and_render = game_update_and_render_union.p1;
+            
+            result.is_valid = (result.update_and_render) != 0;
+        }
     }
     
     if(!result.is_valid)
@@ -167,7 +135,123 @@ Win32UnloadGameCode(Win32GameCode *game_code)
     }
     
     game_code->update_and_render = 0;
-    game_code->is_valid = FALSE;
+    game_code->is_valid = false;
+}
+
+internal Bool
+Win32RegisterFontFile(char *filename_utf8)
+{
+    Bool result = !!AddFontResourceExA((LPCSTR)filename_utf8, FR_PRIVATE, 0);
+    return result;
+}
+
+internal Bool
+Win32MakeAsciiFont(char *font_name_utf8, int font_size, Font *out_font, FontRasterFlags flags)
+{
+    Bool result = false;
+    
+    Bool raster_font = !!(flags & FONT_RASTER_FLAG_RASTER_FONT);
+    Bool dont_map_unicode = !!(flags & FONT_RASTER_FLAG_DONT_MAP_UNICODE);
+    Bool bold = !!(flags & FONT_RASTER_FLAG_BOLD);
+    
+    *out_font = (Font){0};
+    
+    HDC screen_dc = GetDC(0);
+    ASSERT(screen_dc);
+    
+    HDC font_dc = CreateCompatibleDC(screen_dc);
+    ASSERT(font_dc);
+    
+    ReleaseDC(0, screen_dc);
+    
+    int height = font_size;
+    
+    DWORD out_precision = raster_font ? OUT_RASTER_PRECIS : OUT_DEFAULT_PRECIS;
+    DWORD quality = raster_font ? NONANTIALIASED_QUALITY : PROOF_QUALITY;
+    int font_weight = bold ? FW_BOLD : FW_NORMAL;
+    
+    HFONT font = CreateFontA(height, 0, 0, 0,
+                             font_weight,
+                             false,
+                             false,
+                             false,
+                             DEFAULT_CHARSET,
+                             out_precision,
+                             CLIP_DEFAULT_PRECIS,
+                             quality,
+                             DEFAULT_PITCH|FF_DONTCARE,
+                             font_name_utf8);
+    
+    U16 *charset = (dont_map_unicode ? codepage_437_ascii : codepage_437_utf16);
+    
+    if(font)
+    {
+        if(!SelectObject(font_dc, font))
+        {
+            INVALID_CODE_PATH;
+        }
+        
+        SIZE size;
+        if (!GetTextExtentPoint32A(font_dc, "M", 1, &size))
+        {
+            INVALID_CODE_PATH;
+        }
+        
+        BITMAPINFO font_bitmap_info = {0};
+        BITMAPINFOHEADER *header = &font_bitmap_info.bmiHeader;
+        header->biSize = sizeof(*header);
+        header->biWidth = 16*size.cx;
+        header->biHeight = -16*size.cy;
+        header->biPlanes = 1;
+        header->biBitCount = 32;
+        header->biCompression = BI_RGB;
+        
+        VOID *font_bits = 0;
+        HBITMAP font_bitmap = CreateDIBSection(font_dc, &font_bitmap_info, DIB_RGB_COLORS, &font_bits, 0, 0);
+        if(font_bitmap)
+        {
+            SelectObject(font_dc, font_bitmap);
+            SetBkColor(font_dc, RGB(0, 0, 0));
+            SetTextAlign(font_dc, TA_TOP|TA_LEFT);
+            
+            out_font->glyph_w = size.cx;
+            out_font->glyph_h = size.cy;
+            out_font->glyphs_per_row = 16;
+            out_font->glyphs_per_col = 16;
+            out_font->w = 16*size.cx;
+            out_font->h = 16*size.cy;
+            out_font->pitch = out_font->w;
+            out_font->data = (U32 *)font_bits;
+            
+            SetTextColor(font_dc, RGB(255, 255, 255));
+            for(int i=0; i<255; ++i)
+            {
+                int x = i % 16;
+                int y = i / 16;
+                TextOutW(font_dc, out_font->glyph_w*x, out_font->glyph_h*y, charset + i, 1);
+            }
+            
+            U32 *pixels = out_font->data;
+            for(int i=0; i<out_font->pitch*out_font->h; ++i)
+            {
+                if(*(pixels+i))
+                {
+                    *(pixels+i) |= 0xFF000000;
+                }
+            }
+            
+            result = true;
+        }
+        
+        DeleteObject(font);
+    }
+    else
+    {
+        // TODO(sokus): Logging
+    }
+    
+    DeleteDC(font_dc);
+    return result;
 }
 
 internal void
@@ -222,7 +306,7 @@ Win32LoadXInput(void)
 }
 
 internal void
-Win32ProcessKeyboardMessage(GameButtonState *state, B32 is_down)
+Win32ProcessKeyboardMessage(GameButtonState *state, Bool is_down)
 {
     if(state->ended_down != is_down)
     {
@@ -288,7 +372,7 @@ Win32ResizeDIBSection(Win32OffscreenBuffer *buffer, int width, int height)
     // for clarifying the deal with StretchDIBits and BitBlt!
     // No more DC for us.
     int bitmap_memory_size = buffer->width * buffer->height * buffer->bytes_per_pixel;
-    buffer->memory = VirtualAlloc(0, (SizeType)bitmap_memory_size, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+    buffer->memory = VirtualAlloc(0, bitmap_memory_size, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
     buffer->pitch = buffer->width * buffer->bytes_per_pixel;
     
     
@@ -362,7 +446,7 @@ Win32MainWindowCallback(HWND window,
         case WM_CLOSE:
         {
             // TODO(casey): Handle this with a message to the user?
-            global_running = FALSE;
+            global_running = false;
         } break;
         
         case WM_SETCURSOR:
@@ -392,7 +476,7 @@ Win32MainWindowCallback(HWND window,
         case WM_DESTROY:
         {
             // TODO(casey): Handle this as an error - recreate window?
-            global_running = FALSE;
+            global_running = false;
         } break;
 #if 0
         case WM_SYSKEYDOWN:
@@ -415,12 +499,12 @@ Win32MainWindowCallback(HWND window,
         
         case WM_SETFOCUS:
         {
-            global_in_focus = TRUE;
+            global_in_focus = true;
         } break;
         
         case WM_KILLFOCUS:
         {
-            global_in_focus = FALSE;
+            global_in_focus = false;
         } break;
         
         default:
@@ -476,7 +560,7 @@ Win32ProcessPendingMessages(GameControllerInput *keyboard_controller)
         {
             case WM_QUIT:
             {
-                global_running = FALSE;
+                global_running = false;
             } break;
             
             case WM_SYSKEYDOWN:
@@ -489,8 +573,8 @@ Win32ProcessPendingMessages(GameControllerInput *keyboard_controller)
                 // NOTE(casey): Since we are comparing WasDown to IsDown,
                 // we MUST use == and != to convert these bit tests to actualy
                 // 0 or 1 value.
-                B32 was_down = ((message.lParam & (1 << 30)) != 0);
-                B32 is_down = ((message.lParam & (1 << 31)) == 0);
+                Bool was_down = ((message.lParam & (1 << 30)) != 0);
+                Bool is_down = ((message.lParam & (1 << 31)) == 0);
                 if(was_down != is_down)
                 {
                     if(vk_code == 'W')
@@ -509,38 +593,48 @@ Win32ProcessPendingMessages(GameControllerInput *keyboard_controller)
                     {
                         Win32ProcessKeyboardMessage(&keyboard_controller->move_right, is_down);
                     }
-                    else if(vk_code == VK_UP)
+                    else if(vk_code == 'R')
                     {
                         Win32ProcessKeyboardMessage(&keyboard_controller->action_up, is_down);
                     }
-                    else if(vk_code == VK_LEFT)
+                    else if(vk_code == 'F')
                     {
                         Win32ProcessKeyboardMessage(&keyboard_controller->action_left, is_down);
                     }
-                    else if(vk_code == VK_DOWN)
+                    else if(vk_code == 'E')
                     {
                         Win32ProcessKeyboardMessage(&keyboard_controller->action_down, is_down);
                     }
-                    else if(vk_code == VK_RIGHT)
+                    else if(vk_code == 'Q')
                     {
                         Win32ProcessKeyboardMessage(&keyboard_controller->action_right, is_down);
                     }
                     else if(vk_code == VK_ESCAPE)
                     {
-                        Win32ProcessKeyboardMessage(&keyboard_controller->select, is_down);
-                    }
-                    else if(vk_code == VK_SPACE)
-                    {
                         Win32ProcessKeyboardMessage(&keyboard_controller->start, is_down);
                     }
+                    else if(vk_code == VK_TAB)
+                    {
+                        Win32ProcessKeyboardMessage(&keyboard_controller->select, is_down);
+                    }
+                    else if(vk_code == VK_SHIFT)
+                    {
+                        Win32ProcessKeyboardMessage(&keyboard_controller->right_bumper, is_down);
+                    }
+                    else if(vk_code == VK_CONTROL)
+                    {
+                        Win32ProcessKeyboardMessage(&keyboard_controller->left_bumper, is_down);
+                    }
+                    
+                    
                 }
                 
                 if(is_down)
                 {
-                    B32 alt_key_was_down = (message.lParam & (1 << 29));
+                    Bool alt_key_was_down = (message.lParam & (1 << 29));
                     if((vk_code == VK_F4) && alt_key_was_down)
                     {
-                        global_running = FALSE;
+                        global_running = false;
                     }
                     else if ((vk_code == VK_RETURN) && alt_key_was_down)
                     {
@@ -587,19 +681,21 @@ WinMain(HINSTANCE instance,
     Win32BuildEXEPathFilename(&win32_state, "summoned_temp.dll",
                               sizeof(temp_game_code_dll_path), temp_game_code_dll_path);
     
+    char game_code_lock_path[MAX_PATH];
+    Win32BuildEXEPathFilename(&win32_state, "lock.tmp",
+                              sizeof(game_code_lock_path), game_code_lock_path);
     
     // NOTE(casey): Set the Windows scheduler granularity to 1ms
     // so that our Sleep() can be more granular.
     UINT desired_scheduler_ms = 1;
-    B32 sleep_is_granular = (timeBeginPeriod(desired_scheduler_ms) == TIMERR_NOERROR);
+    Bool sleep_is_granular = (timeBeginPeriod(desired_scheduler_ms) == TIMERR_NOERROR);
     
     Win32LoadXInput();
     
 #if SUMMONED_DEBUG
-    debug_global_show_cursor = TRUE;
+    debug_global_show_cursor = true;
 #endif
     WNDCLASSA window_class = {0};
-    
     
     /* NOTE(casey): 1080p display mode is 1920x1080 -> Half of that is 960x540
        1920 -> 2048 = 2048-1920 -> 128 pixels
@@ -647,7 +743,7 @@ WinMain(HINSTANCE instance,
             F32 target_seconds_per_frame = 1.0f / (F32)game_update_hz;
             
             
-            global_running = TRUE;
+            global_running = true;
 #if SUMMONED_DEBUG
             LPVOID base_address = (LPVOID)TERABYTES(2);
 #else
@@ -669,39 +765,59 @@ WinMain(HINSTANCE instance,
             // former need be saved for state playback.
             win32_state.total_size = 
                 game_memory.permanent_storage_size + game_memory.transient_storage_size;
-            win32_state.game_memory_block = VirtualAlloc(base_address, (SizeType)win32_state.total_size,
+            win32_state.game_memory_block = VirtualAlloc(base_address, win32_state.total_size,
                                                          MEM_RESERVE|MEM_COMMIT,
                                                          PAGE_READWRITE);
             game_memory.permanent_storage = win32_state.game_memory_block;
             game_memory.transient_storage = ((U8 *)game_memory.permanent_storage +
                                              game_memory.permanent_storage_size);
             
+            char font_path[MAX_PATH];
+            Win32BuildEXEPathFilename(&win32_state, "liberation-mono.ttf",
+                                      sizeof(font_path), font_path);
+            
+            if(!Win32RegisterFontFile(font_path))
+            {
+                INVALID_CODE_PATH;
+            }
+            
+            FontPack font_pack = { .name = "Liberation Mono", .size = 24 };
+            
+            if(!Win32MakeAsciiFont(font_pack.name, font_pack.size, &font_pack.regular,
+                                   FONT_RASTER_FLAG_RASTER_FONT))
+            {
+                INVALID_CODE_PATH;
+            }
+            
+            if(!Win32MakeAsciiFont(font_pack.name, font_pack.size, &font_pack.bold,
+                                   FONT_RASTER_FLAG_RASTER_FONT|FONT_RASTER_FLAG_BOLD))
+            {
+                INVALID_CODE_PATH;
+            }
+            
             if(game_memory.permanent_storage && game_memory.transient_storage)
             {
                 LARGE_INTEGER last_counter = Win32GetWallClock();
                 LARGE_INTEGER flip_wall_clock = Win32GetWallClock();
-                LARGE_INTEGER last_code_reload_check = Win32GetWallClock();
+                // LARGE_INTEGER last_code_reload_check = Win32GetWallClock();
                 
                 GameInput input[2] = {0};
                 GameInput *new_input = &input[0];
                 GameInput *old_input = &input[1];
                 
                 Win32GameCode game = Win32LoadGameCode(source_game_code_dll_path,
-                                                       temp_game_code_dll_path);
+                                                       temp_game_code_dll_path,
+                                                       game_code_lock_path);
                 
                 while(global_running)
                 {
-                    if((Win32GetSecondsElapsed(last_code_reload_check, flip_wall_clock)) > 1)
+                    FILETIME new_dll_write_time = Win32GetLastWriteTime(source_game_code_dll_path);
+                    if(CompareFileTime(&new_dll_write_time, &game.last_dll_write_time) != 0)
                     {
-                        last_code_reload_check = flip_wall_clock;
-                        
-                        FILETIME new_dll_write_time = Win32GetLastWriteTime(source_game_code_dll_path);
-                        if(CompareFileTime(&new_dll_write_time, &game.last_dll_write_time) != 0)
-                        {
-                            Win32UnloadGameCode(&game);
-                            game = Win32LoadGameCode(source_game_code_dll_path,
-                                                     temp_game_code_dll_path);
-                        }
+                        Win32UnloadGameCode(&game);
+                        game = Win32LoadGameCode(source_game_code_dll_path,
+                                                 temp_game_code_dll_path,
+                                                 game_code_lock_path);
                     }
                     
                     new_input->dt_for_frame = target_seconds_per_frame;
@@ -712,7 +828,7 @@ WinMain(HINSTANCE instance,
                     GameControllerInput *old_keyboard_controller = GetController(old_input, 0);
                     GameControllerInput *new_keyboard_controller = GetController(new_input, 0);
                     *new_keyboard_controller = (GameControllerInput){0};
-                    new_keyboard_controller->is_connected = TRUE;
+                    new_keyboard_controller->is_connected = true;
                     for(U64 button_index = 0;
                         button_index < ARRAY_COUNT(new_keyboard_controller->buttons);
                         ++button_index)
@@ -725,11 +841,11 @@ WinMain(HINSTANCE instance,
                     
                     if(!global_in_focus)
                     {
-                        for(SizeType button_index = 0;
+                        for(U32 button_index = 0;
                             button_index < ARRAY_COUNT(new_keyboard_controller->buttons);
                             ++button_index)
                         {
-                            Win32ProcessKeyboardMessage(&new_keyboard_controller->buttons[button_index], FALSE);
+                            Win32ProcessKeyboardMessage(&new_keyboard_controller->buttons[button_index], false);
                         }
                     }
                     
@@ -768,7 +884,7 @@ WinMain(HINSTANCE instance,
                         XINPUT_STATE controller_state;
                         if(global_xinput_get_state(controller_index, &controller_state) == ERROR_SUCCESS)
                         {
-                            new_controller->is_connected = TRUE;
+                            new_controller->is_connected = true;
                             new_controller->is_analog = old_controller->is_analog;
                             
                             
@@ -788,17 +904,17 @@ WinMain(HINSTANCE instance,
                             if((new_controller->stick_average_x != 0.0f) ||
                                (new_controller->stick_average_y != 0.0f))
                             {
-                                new_controller->is_analog = TRUE;
+                                new_controller->is_analog = true;
                             }
                             else
                             {
-                                new_controller->is_analog = FALSE;
+                                new_controller->is_analog = false;
                             }
                             
-                            B32 dpad_up = !!(pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
-                            B32 dpad_left = !!(pad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT);
-                            B32 dpad_down = !!(pad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN);
-                            B32 dpad_right = !!(pad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT);
+                            Bool dpad_up = !!(pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
+                            Bool dpad_left = !!(pad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT);
+                            Bool dpad_down = !!(pad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN);
+                            Bool dpad_right = !!(pad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT);
                             
                             Win32ProcessXInputDigitalButton(dpad_left,
                                                             1,
@@ -846,7 +962,7 @@ WinMain(HINSTANCE instance,
                         }
                         else
                         {
-                            new_controller->is_connected = FALSE;
+                            new_controller->is_connected = false;
                         }
                         
                     }
@@ -859,16 +975,19 @@ WinMain(HINSTANCE instance,
                     buffer.pitch = global_backbuffer.pitch;
                     buffer.bytes_per_pixel = global_backbuffer.bytes_per_pixel;
                     
+                    LARGE_INTEGER game_work_start = Win32GetWallClock();
+                    
                     if(game.update_and_render)
                     {
-                        game.update_and_render(&game_memory, new_input, &buffer);
+                        game.update_and_render(&game_memory, new_input, &font_pack, &buffer);
                     }
                     
                     LARGE_INTEGER work_counter = Win32GetWallClock();
-                    F32 work_seconds_elapsed = Win32GetSecondsElapsed(last_counter, work_counter);
+                    F32 platform_work_seconds_elapsed = Win32GetSecondsElapsed(last_counter, game_work_start);
+                    F32 game_work_seconds_elapsed = Win32GetSecondsElapsed(game_work_start, work_counter);
                     
                     // TODO(casey): NOT TESTED YET! PROBABLY BUGGY!!!!!
-                    F32 seconds_elapsed_for_frame = work_seconds_elapsed;
+                    F32 seconds_elapsed_for_frame = platform_work_seconds_elapsed + game_work_seconds_elapsed;
                     if(seconds_elapsed_for_frame < target_seconds_per_frame)
                     {
                         if(sleep_is_granular)
@@ -879,7 +998,6 @@ WinMain(HINSTANCE instance,
                             {
                                 Sleep(sleep_ms);
                             }
-                            
                         }
                         
                         F32 test_seconds_elapsed_for_frame =
