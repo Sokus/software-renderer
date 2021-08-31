@@ -31,8 +31,6 @@ typedef uint64_t U64;
 typedef float F32;
 typedef float F64;
 
-typedef _Bool Bool;
-
 typedef size_t MemoryIndex;
 
 //~NOTE(sokus): macros
@@ -77,7 +75,7 @@ typedef struct GameOffscreenBuffer
 
 typedef struct GameMemory
 {
-    Bool is_initialized;
+    bool is_initialized;
     
     U64 permanent_storage_size;
     void *permanent_storage; // NOTE(casey): REQUIRED to be cleared to zero at startup
@@ -89,13 +87,13 @@ typedef struct GameMemory
 typedef struct GameButtonState
 {
     int half_transition_count;
-    Bool ended_down;
+    bool ended_down;
 } GameButtonState;
 
 typedef struct GameControllerInput
 {
-    Bool is_connected;
-    Bool is_analog;
+    bool is_connected;
+    bool is_analog;
     F32 stick_average_x;
     F32 stick_average_y;
     
@@ -146,6 +144,13 @@ GetController(GameInput *input, unsigned int controller_index)
     return result;
 }
 
+typedef enum FontRasterFlags
+{
+    FONT_RASTER_FLAG_RASTER_FONT = 1,
+    FONT_RASTER_FLAG_DONT_MAP_UNICODE = 2,
+    FONT_RASTER_FLAG_BOLD = 4
+} FontRasterFlags;
+
 typedef struct Font
 {
     int glyph_w;
@@ -160,7 +165,8 @@ typedef struct Font
 
 typedef struct FontPack
 {
-    char *name;
+    char *font_name;
+    char *filename;
     int size;
     
     Font regular;
@@ -203,7 +209,7 @@ StringLength(char *string)
 
 typedef void GameUpdateAndRenderType(GameMemory *memory,
                                      GameInput *input,
-                                     FontPack *font_pack,
-                                     GameOffscreenBuffer *buffer);
+                                     GameOffscreenBuffer *buffer,
+                                     FontPack *font_pack);
 
 #endif //SUMMONED_PLATFORM_H

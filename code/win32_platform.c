@@ -5,13 +5,13 @@
 
 #include "win32_platform.h"
 
-#include "win32_font_maps.c"
+#include "summoned_font_maps.c"
 
-global Bool global_running;
-global Bool global_in_focus;
+global bool global_running;
+global bool global_in_focus;
 global Win32OffscreenBuffer global_backbuffer;
 global I64 global_perf_count_frequency;
-global Bool debug_global_show_cursor;
+global bool debug_global_show_cursor;
 global WINDOWPLACEMENT global_window_position = { .length=sizeof(global_window_position) };
 
 typedef DWORD WINAPI XInputGetStateType(DWORD dwUserIndex, XINPUT_STATE *pState);
@@ -138,21 +138,21 @@ Win32UnloadGameCode(Win32GameCode *game_code)
     game_code->is_valid = false;
 }
 
-internal Bool
+internal bool
 Win32RegisterFontFile(char *filename_utf8)
 {
-    Bool result = !!AddFontResourceExA((LPCSTR)filename_utf8, FR_PRIVATE, 0);
+    bool result = !!AddFontResourceExA((LPCSTR)filename_utf8, FR_PRIVATE, 0);
     return result;
 }
 
-internal Bool
+internal bool
 Win32MakeAsciiFont(char *font_name_utf8, int font_size, Font *out_font, FontRasterFlags flags)
 {
-    Bool result = false;
+    bool result = false;
     
-    Bool raster_font = !!(flags & FONT_RASTER_FLAG_RASTER_FONT);
-    Bool dont_map_unicode = !!(flags & FONT_RASTER_FLAG_DONT_MAP_UNICODE);
-    Bool bold = !!(flags & FONT_RASTER_FLAG_BOLD);
+    bool raster_font = !!(flags & FONT_RASTER_FLAG_RASTER_FONT);
+    bool dont_map_unicode = !!(flags & FONT_RASTER_FLAG_DONT_MAP_UNICODE);
+    bool bold = !!(flags & FONT_RASTER_FLAG_BOLD);
     
     *out_font = (Font){0};
     
@@ -306,7 +306,7 @@ Win32LoadXInput(void)
 }
 
 internal void
-Win32ProcessKeyboardMessage(GameButtonState *state, Bool is_down)
+Win32ProcessKeyboardMessage(GameButtonState *state, bool is_down)
 {
     if(state->ended_down != is_down)
     {
@@ -573,8 +573,8 @@ Win32ProcessPendingMessages(GameControllerInput *keyboard_controller)
                 // NOTE(casey): Since we are comparing WasDown to IsDown,
                 // we MUST use == and != to convert these bit tests to actualy
                 // 0 or 1 value.
-                Bool was_down = ((message.lParam & (1 << 30)) != 0);
-                Bool is_down = ((message.lParam & (1 << 31)) == 0);
+                bool was_down = ((message.lParam & (1 << 30)) != 0);
+                bool is_down = ((message.lParam & (1 << 31)) == 0);
                 if(was_down != is_down)
                 {
                     if(vk_code == 'W')
@@ -631,7 +631,7 @@ Win32ProcessPendingMessages(GameControllerInput *keyboard_controller)
                 
                 if(is_down)
                 {
-                    Bool alt_key_was_down = (message.lParam & (1 << 29));
+                    bool alt_key_was_down = (message.lParam & (1 << 29));
                     if((vk_code == VK_F4) && alt_key_was_down)
                     {
                         global_running = false;
@@ -688,7 +688,7 @@ WinMain(HINSTANCE instance,
     // NOTE(casey): Set the Windows scheduler granularity to 1ms
     // so that our Sleep() can be more granular.
     UINT desired_scheduler_ms = 1;
-    Bool sleep_is_granular = (timeBeginPeriod(desired_scheduler_ms) == TIMERR_NOERROR);
+    bool sleep_is_granular = (timeBeginPeriod(desired_scheduler_ms) == TIMERR_NOERROR);
     
     Win32LoadXInput();
     
@@ -911,10 +911,10 @@ WinMain(HINSTANCE instance,
                                 new_controller->is_analog = false;
                             }
                             
-                            Bool dpad_up = !!(pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
-                            Bool dpad_left = !!(pad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT);
-                            Bool dpad_down = !!(pad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN);
-                            Bool dpad_right = !!(pad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT);
+                            bool dpad_up = !!(pad->wButtons & XINPUT_GAMEPAD_DPAD_UP);
+                            bool dpad_left = !!(pad->wButtons & XINPUT_GAMEPAD_DPAD_LEFT);
+                            bool dpad_down = !!(pad->wButtons & XINPUT_GAMEPAD_DPAD_DOWN);
+                            bool dpad_right = !!(pad->wButtons & XINPUT_GAMEPAD_DPAD_RIGHT);
                             
                             Win32ProcessXInputDigitalButton(dpad_left,
                                                             1,

@@ -309,10 +309,8 @@ Rect GetRectRelative(Rect parent, F32 x0_pct, F32 y0_pct, F32 x1_pct, F32 y1_pct
     return result;
 }
 
-void GameUpdateAndRender(GameMemory *memory, GameInput *input, FontPack *font_pack, GameOffscreenBuffer *buffer)
+void GameUpdateAndRender(GameMemory *memory, GameInput *input, GameOffscreenBuffer *buffer, FontPack *font_pack)
 {
-    UNUSED(font_pack);
-    
     ASSERT((&input->controllers[0].terminator - &input->controllers[0].buttons[0]) ==
            ARRAY_COUNT(input->controllers[0].buttons));
     
@@ -333,14 +331,14 @@ void GameUpdateAndRender(GameMemory *memory, GameInput *input, FontPack *font_pa
     
     game_state->time += input->dt_for_frame;
     
+    game_state->position_x += (input->dt_for_frame / 4.0f);
+    if(game_state->position_x > 0.5f)
+    {
+        game_state->position_x = 0;
+    }
+    
     DrawRectangle(buffer, 0, 0, (F32)buffer->width, (F32)buffer->height, 0.0f, 0.0f, 0.0f, 1.0f);
-#if 0
-    DrawBitmap(buffer,
-               font_pack->regular.data, font_pack->regular.w, font_pack->regular.h,
-               0, 0, font_pack->regular.w, font_pack->regular.h,
-               0, 0,
-               1, 1, 1, 1);
-#endif
+    
     F32 fill_c = 0.07f;
     F32 out_c = 0.3f;
     F32 rect_a = 0.9f;
@@ -353,7 +351,7 @@ void GameUpdateAndRender(GameMemory *memory, GameInput *input, FontPack *font_pa
                                             0, 5, 5, 0);
     Rect panel_r1 = GetRectRelativeImplicit(screen_rect, 0.5f, 0, 1.0f, 0.5f,
                                             5, 5, 0, 0);
-    Rect panel_m = GetRectRelativeImplicit(screen_rect, 0.4, 0, 1.0f, 0.25f,
+    Rect panel_m = GetRectRelativeImplicit(screen_rect, 0.4f, 0, 1.0f, 0.25f,
                                            0, 10+rect_border, 10+rect_border, 10+rect_border);
     
     DrawRectangleOutlineFilled(buffer,
@@ -380,4 +378,17 @@ void GameUpdateAndRender(GameMemory *memory, GameInput *input, FontPack *font_pa
                                fill_c, fill_c, fill_c, rect_a,
                                out_c, out_c, out_c, rect_a,
                                rect_border);
+    
+    
+    char text1[] = "How bout...";
+    char text2[] = "Factorio?";
+    DrawString(buffer, &font_pack->regular, text1, sizeof(text1), 150, 120, 1, 1, 1, 0.8f);
+    DrawString(buffer, &font_pack->bold, text2, sizeof(text2), 150, 150, 1, 1, 1, 1);
+#if 0
+    DrawBitmap(buffer,
+               font_pack->regular.data, font_pack->regular.w, font_pack->regular.h,
+               0, 0, font_pack->regular.w, font_pack->regular.h,
+               0, 0,
+               1, 1, 0, 0.5f);
+#endif
 }

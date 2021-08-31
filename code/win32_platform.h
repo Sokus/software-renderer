@@ -3,12 +3,6 @@
 #ifndef WIN32_SUMMONED_H
 #define WIN32_SUMMONED_H
 
-typedef struct Win32WindowDimension
-{
-    int width;
-    int height;
-} Win32WindowDimension;
-
 typedef struct Win32OffscreenBuffer
 {
     BITMAPINFO info;
@@ -19,6 +13,14 @@ typedef struct Win32OffscreenBuffer
     int bytes_per_pixel;
 } Win32OffscreenBuffer;
 
+
+typedef struct Win32WindowDimension
+{
+    int width;
+    int height;
+} Win32WindowDimension;
+
+
 typedef struct Win32GameCode
 {
     HMODULE game_code_dll;
@@ -26,7 +28,7 @@ typedef struct Win32GameCode
     
     GameUpdateAndRenderType *update_and_render;
     
-    Bool is_valid;
+    bool is_valid;
 } Win32GameCode;
 
 typedef struct Win32State
@@ -37,13 +39,5 @@ typedef struct Win32State
     char exe_path[MAX_PATH];
     char *one_past_last_exe_path_slash;
 } Win32State;
-
-typedef enum FontRasterFlags
-{
-    FONT_RASTER_FLAG_RASTER_FONT = 1,
-    FONT_RASTER_FLAG_DONT_MAP_UNICODE = 2,
-    FONT_RASTER_FLAG_BOLD = 4
-} FontRasterFlags;
-
 
 #endif //WIN32_SUMMONED_H

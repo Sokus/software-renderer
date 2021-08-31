@@ -26,7 +26,7 @@ load_paths = {
 commands = {
     .build = {.out="*compilation*", .footer_panel = true, .save_dirty_files = true,
         .win = ".\build.bat",
-        .linux = "echo No build.sh path specified yet.", },
+        .linux = "./build.sh", },
     
     .run = {.out="*compilation*", .footer_panel = true, .save_dirty_files = false,
         .win = ".\run.bat",
