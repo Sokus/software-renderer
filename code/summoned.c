@@ -11,10 +11,10 @@ DrawRectangle(GameOffscreenBuffer *buffer,
               F32 real_min_x, F32 real_min_y, F32 real_max_x, F32 real_max_y,
               F32 r, F32 g, F32 b, F32 a)
 {
-    I32 min_x = RoundF32ToI32(real_min_x);
-    I32 min_y = RoundF32ToI32(real_min_y);
-    I32 max_x = RoundF32ToI32(real_max_x);
-    I32 max_y = RoundF32ToI32(real_max_y);
+    int min_x = RoundF32ToI32(real_min_x);
+    int min_y = RoundF32ToI32(real_min_y);
+    int max_x = RoundF32ToI32(real_max_x);
+    int max_y = RoundF32ToI32(real_max_y);
     
     min_x = CLAMP_BOT(min_x, 0);
     min_y = CLAMP_BOT(min_y, 0);
@@ -25,13 +25,13 @@ DrawRectangle(GameOffscreenBuffer *buffer,
     
     for(int y = min_y;
         y < max_y;
-        y += 1)
+        ++y)
     {
         U32 *dest = (U32 *)dest_row;
         
         for(int x = min_x;
             x < max_x;
-            x += 1)
+            ++x)
         {
             F32 dest_r = (F32)((*dest >> 16) & 0xFF) / 255.0f;
             F32 dest_g = (F32)((*dest >> 8) & 0xFF) / 255.0f;
@@ -44,6 +44,50 @@ DrawRectangle(GameOffscreenBuffer *buffer,
             *dest = (((U32)(new_r + 0.5f) << 16) |
                      ((U32)(new_g + 0.5f) << 8) |
                      ((U32)(new_b + 0.5f) << 0));
+            ++dest;
+        }
+        
+        dest_row += buffer->pitch;
+    }
+}
+
+void
+DrawRectangle2(GameOffscreenBuffer *buffer,
+               F32 real_min_x, F32 real_min_y, F32 real_max_x, F32 real_max_y,
+               F32 r, F32 g, F32 b, F32 a)
+{
+    int min_x = RoundF32ToI32(real_min_x);
+    int min_y = RoundF32ToI32(real_min_y);
+    int max_x = RoundF32ToI32(real_max_x);
+    int max_y = RoundF32ToI32(real_max_y);
+    
+    min_x = CLAMP_BOT(min_x, 0);
+    min_y = CLAMP_BOT(min_y, 0);
+    max_x = CLAMP_TOP(max_x, buffer->width);
+    max_y = CLAMP_TOP(max_y, buffer->height);
+    
+    U8 *dest_row = (U8 *)buffer->memory + min_y*buffer->pitch + min_x*buffer->bytes_per_pixel;
+    U8 *dest;
+    
+    for(int y = min_y;
+        y < max_y;
+        ++y)
+    {
+        
+        dest = dest_row;
+        
+        for(int x = min_x;
+            x < max_x;
+            ++x)
+        {
+            *dest = (U8)((a*b*255.0f) + ((F32)(*dest)*(1.0f-a)));
+            ++dest;
+            
+            *dest = (U8)((a*g*255.0f) + ((F32)(*dest)*(1.0f-a)));
+            ++dest;
+            
+            *dest = (U8)((a*r*255.0f) + ((F32)(*dest)*(1.0f-a)));
+            ++dest;
             
             ++dest;
         }
@@ -311,6 +355,10 @@ Rect GetRectRelative(Rect parent, F32 x0_pct, F32 y0_pct, F32 x1_pct, F32 y1_pct
 
 void GameUpdateAndRender(GameMemory *memory, GameInput *input, GameOffscreenBuffer *buffer, FontPack *font_pack)
 {
+    UNUSED(memory);
+    UNUSED(input);
+    UNUSED(buffer);
+    UNUSED(font_pack);
     ASSERT((&input->controllers[0].terminator - &input->controllers[0].buttons[0]) ==
            ARRAY_COUNT(input->controllers[0].buttons));
     
@@ -337,8 +385,8 @@ void GameUpdateAndRender(GameMemory *memory, GameInput *input, GameOffscreenBuff
         game_state->position_x = 0;
     }
     
-    DrawRectangle(buffer, 0, 0, (F32)buffer->width, (F32)buffer->height, 0.0f, 0.0f, 0.0f, 1.0f);
-    
+    DrawRectangle2(buffer, 0, 0, (F32)buffer->width, (F32)buffer->height, 0.0f, 0.0f, 0.0f, 1.0f);
+#if 0
     F32 fill_c = 0.07f;
     F32 out_c = 0.3f;
     F32 rect_a = 0.9f;
@@ -378,17 +426,5 @@ void GameUpdateAndRender(GameMemory *memory, GameInput *input, GameOffscreenBuff
                                fill_c, fill_c, fill_c, rect_a,
                                out_c, out_c, out_c, rect_a,
                                rect_border);
-    
-    
-    char text1[] = "How bout...";
-    char text2[] = "Factorio?";
-    DrawString(buffer, &font_pack->regular, text1, sizeof(text1), 150, 120, 1, 1, 1, 0.8f);
-    DrawString(buffer, &font_pack->bold, text2, sizeof(text2), 150, 150, 1, 1, 1, 1);
-#if 0
-    DrawBitmap(buffer,
-               font_pack->regular.data, font_pack->regular.w, font_pack->regular.h,
-               0, 0, font_pack->regular.w, font_pack->regular.h,
-               0, 0,
-               1, 1, 0, 0.5f);
-#endif
+#endif 
 }

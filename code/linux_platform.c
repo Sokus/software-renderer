@@ -21,7 +21,7 @@
 global SDLOffscreenBuffer global_backbuffer = { .bytes_per_pixel = 4 };
 global bool global_is_running;
 
-#define MAX_CONTROLLERS 4
+#define MAX_CONTROLLERS 0
 global SDL_GameController *global_controller_handles[MAX_CONTROLLERS];
 global SDL_Haptic *global_rumble_handles[MAX_CONTROLLERS];
 
@@ -53,31 +53,23 @@ SDLGetWindowRefreshRate(SDL_Window *window)
     
     return mode.refresh_rate;
 }
+#endif 
 
 internal F32
-SDLGetSecondsElapsed(U64 old_counter, U64 current_counter)
+SDLGetSecondsElapsed(U64 start_counter, U64 end_counter)
 {
     F32 result;
     
-    result = ((F32)(current_counter - old_counter) / (F32)(SDL_GetPerformanceFrequency()));
+    result = ((F32)(end_counter - start_counter) / (F32)(SDL_GetPerformanceFrequency()));
     
     return result;
 }
-#endif 
 
 timespec
 LinuxGetWallClock()
 {
     timespec result;
     clock_gettime(CLOCK_MONOTONIC, &result);
-    return result;
-}
-
-F32
-LinuxGetSecondsElapsed(timespec start, timespec end)
-{
-    F32 result = ((F32)(end.tv_sec - start.tv_sec)
-                  + ((F32)(end.tv_nsec - start.tv_nsec) * 1e-9f));
     return result;
 }
 
@@ -508,8 +500,7 @@ int main()
 {
     SDL_Init(SDL_INIT_VIDEO |
              SDL_INIT_GAMECONTROLLER |
-             SDL_INIT_HAPTIC |
-             SDL_INIT_AUDIO);
+             SDL_INIT_HAPTIC);
     TTF_Init();
     
     FontPack font_pack = { .font_name = "Liberation Mono", .filename = "liberation-mono.ttf", .size = 24 };
@@ -546,7 +537,7 @@ int main()
     {
         SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC);
         
-        int game_update_hz = 30;
+        int game_update_hz = 60;
         F32 target_seconds_per_frame = 1.0f / (F32)game_update_hz;
         
         if(renderer)
@@ -585,11 +576,12 @@ int main()
                                              game_memory.permanent_storage_size); 
             
             
-            timespec last_counter = LinuxGetWallClock();
+            U64 last_counter = SDL_GetPerformanceCounter();
             U64 last_cycle_count = _rdtsc();
             
             while(global_is_running)
             {
+                
                 timespec new_dll_write_time = LinuxGetLastWriteTime(source_game_code_dll_path);
                 if(!LinuxTimespecsAreTheSame(new_dll_write_time, game_code.last_dll_write_time))
                 {
@@ -605,7 +597,7 @@ int main()
                 *new_keyboard_controller = (GameControllerInput){0};
                 
                 for(size_t button_index = 0;
-                    button_index < ARRAY_COUNT(new_keyboard_controller->buttons);
+                    ++button_index < ARRAY_COUNT(new_keyboard_controller->buttons);
                     ++button_index)
                 {
                     new_keyboard_controller->buttons[button_index].ended_down =
@@ -617,6 +609,7 @@ int main()
                 {
                     SDLHandleEvent(&event, new_keyboard_controller);
                 }
+                
                 
                 for(int controller_index = 0;
                     controller_index < MAX_CONTROLLERS;
@@ -712,67 +705,62 @@ int main()
                     {
                         // NOTE(sokus): This controller is not plugged in.
                     }
-                    
-                    GameOffscreenBuffer buffer = {0};
-                    buffer.memory = global_backbuffer.memory;
-                    buffer.width = global_backbuffer.width;
-                    buffer.height = global_backbuffer.height;
-                    buffer.pitch = global_backbuffer.pitch;
-                    buffer.bytes_per_pixel = global_backbuffer.bytes_per_pixel;
-                    
-                    if(game_code.game_update_and_render)
-                    {
-                        game_code.game_update_and_render(&game_memory, new_input, &buffer, &font_pack);
-                    }
-                    
-                    
-                    if(LinuxGetSecondsElapsed(last_counter, LinuxGetWallClock()) < target_seconds_per_frame)
-                    {
-                        F32 time_to_sleep_in_seconds = target_seconds_per_frame -
-                            LinuxGetSecondsElapsed(last_counter, LinuxGetWallClock()); 
-                        I32 time_to_sleep_in_ms = (I32)(time_to_sleep_in_seconds * 1000) + 1;
-                        
-                        if(time_to_sleep_in_ms > 0)
-                        {
-                            SDL_Delay(time_to_sleep_in_ms);
-                        }
-                        
-#if 0
-                        ASSERT(LinuxGetSecondsElapsed(last_counter, LinuxGetWallClock())
-                               < target_seconds_per_frame);
-#endif
-                        while(LinuxGetSecondsElapsed(last_counter, LinuxGetWallClock()) <
-                              target_seconds_per_frame)
-                        {
-                            printf("CPU SPIN\n");
-                            // CPU SPIN
-                        }
-                    }
-                    
-                    // Get this before SDLUpdateWindow() so that we don't keep missing VBlanks.
-                    timespec end_counter = LinuxGetWallClock();
-                    
-                    SDLUpdateWindow(&global_backbuffer, renderer);
-                    
-                    U64 end_cycle_count = _rdtsc();
-                    U64 cycles_elapsed = end_cycle_count - last_cycle_count;
-                    UNUSED(cycles_elapsed);
-                    
-                    F32 counter_elapsed = LinuxGetSecondsElapsed(last_counter, end_counter);
-                    
-                    F32 ms_per_frame = 1000.0f * counter_elapsed;
-                    UNUSED(ms_per_frame);
-                    
-                    printf("%fms\n", ms_per_frame);
-                    
-                    
-                    GameInput *temp = new_input;
-                    new_input = old_input;
-                    old_input = temp;
-                    
-                    last_cycle_count = end_cycle_count;
-                    last_counter = end_counter;
                 }
+                
+                GameOffscreenBuffer buffer = {0};
+                U32 temporary_memory[960*540];
+                buffer.memory = temporary_memory;
+                
+                //buffer.memory = global_backbuffer.memory;
+                buffer.width = global_backbuffer.width;
+                buffer.height = global_backbuffer.height;
+                buffer.pitch = global_backbuffer.pitch;
+                buffer.bytes_per_pixel = global_backbuffer.bytes_per_pixel;
+                
+                
+                
+                if(game_code.game_update_and_render)
+                {
+                    game_code.game_update_and_render(&game_memory, new_input, &buffer, &font_pack);
+                }
+                
+                // Get this before SDLUpdateWindow() so that we don't keep missing VBlanks.
+                U64 work_counter = SDL_GetPerformanceCounter();
+                
+                if(SDLGetSecondsElapsed(last_counter, work_counter) < target_seconds_per_frame)
+                {
+                    F32 time_to_sleep_in_seconds = target_seconds_per_frame -
+                        SDLGetSecondsElapsed(last_counter, SDL_GetPerformanceCounter()); 
+                    I32 time_to_sleep_in_ms = (I32)(time_to_sleep_in_seconds * 1000) + 1;
+                    
+                    if(time_to_sleep_in_ms > 0)
+                    {
+                        SDL_Delay(time_to_sleep_in_ms);
+                    }
+                    
+                    while(SDLGetSecondsElapsed(last_counter, SDL_GetPerformanceCounter()) <
+                          target_seconds_per_frame)
+                    {
+                        printf("CPU SPIN\n");
+                        // CPU SPIN
+                    }
+                }
+                
+                SDLUpdateWindow(&global_backbuffer, renderer);
+                
+                printf("%5.2f ms \n", 1000.0f*SDLGetSecondsElapsed(last_counter, work_counter));
+                
+                U64 end_cycle_count = _rdtsc();
+                U64 cycles_elapsed = end_cycle_count - last_cycle_count;
+                UNUSED(cycles_elapsed);
+                
+                
+                GameInput *temp = new_input;
+                new_input = old_input;
+                old_input = temp;
+                
+                last_cycle_count = _rdtsc();
+                last_counter = SDL_GetPerformanceCounter();
             }
         }
     }
