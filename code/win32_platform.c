@@ -2,6 +2,7 @@
 
 #include <windows.h>
 #include <xinput.h>
+#include <stdio.h>
 
 #include "win32_platform.h"
 
@@ -772,8 +773,9 @@ WinMain(HINSTANCE instance,
             game_memory.transient_storage = ((U8 *)game_memory.permanent_storage +
                                              game_memory.permanent_storage_size);
             
+            FontPack font_pack = { .name = "Liberation Mono", .filename="liberation-mono.ttf", .size = 24 };
             char font_path[MAX_PATH];
-            Win32BuildEXEPathFilename(&win32_state, "liberation-mono.ttf",
+            Win32BuildEXEPathFilename(&win32_state, font_pack.filename,
                                       sizeof(font_path), font_path);
             
             if(!Win32RegisterFontFile(font_path))
@@ -781,7 +783,6 @@ WinMain(HINSTANCE instance,
                 INVALID_CODE_PATH;
             }
             
-            FontPack font_pack = { .name = "Liberation Mono", .size = 24 };
             
             if(!Win32MakeAsciiFont(font_pack.name, font_pack.size, &font_pack.regular,
                                    FONT_RASTER_FLAG_RASTER_FONT))
@@ -808,7 +809,6 @@ WinMain(HINSTANCE instance,
                 Win32GameCode game = Win32LoadGameCode(source_game_code_dll_path,
                                                        temp_game_code_dll_path,
                                                        game_code_lock_path);
-                
                 while(global_running)
                 {
                     FILETIME new_dll_write_time = Win32GetLastWriteTime(source_game_code_dll_path);
@@ -979,7 +979,7 @@ WinMain(HINSTANCE instance,
                     
                     if(game.update_and_render)
                     {
-                        game.update_and_render(&game_memory, new_input, &font_pack, &buffer);
+                        game.update_and_render(&game_memory, new_input, &buffer, &font_pack);
                     }
                     
                     LARGE_INTEGER work_counter = Win32GetWallClock();

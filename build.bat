@@ -1,6 +1,6 @@
 @echo off
 
-set common_compiler_flags=-Wall -Wextra -Werror -std=c11 -pedantic -O0 -g -Wl,/incremental:no -fdiagnostics-absolute-paths  -D SUMMONED_DEBUG=1
+set common_compiler_flags=-Wall -Wextra -O3 -Wl,/incremental:no -fdiagnostics-absolute-paths  -D SUMMONED_DEBUG=1
 
 set libs=-luser32 -lgdi32 -lwinmm
 
@@ -18,7 +18,6 @@ del lock.tmp
 :: Check if exe is running
 set recompile=1
 if exist summoned.exe ( tasklist | find "summoned.exe">nul: && set recompile=0 )
-
 
 :: Recompile exe if possible
 if %recompile%==1 ( %win32_compile% ) else ( echo summoned.exe is currently running )

@@ -355,10 +355,6 @@ Rect GetRectRelative(Rect parent, F32 x0_pct, F32 y0_pct, F32 x1_pct, F32 y1_pct
 
 void GameUpdateAndRender(GameMemory *memory, GameInput *input, GameOffscreenBuffer *buffer, FontPack *font_pack)
 {
-    UNUSED(memory);
-    UNUSED(input);
-    UNUSED(buffer);
-    UNUSED(font_pack);
     ASSERT((&input->controllers[0].terminator - &input->controllers[0].buttons[0]) ==
            ARRAY_COUNT(input->controllers[0].buttons));
     
@@ -386,7 +382,6 @@ void GameUpdateAndRender(GameMemory *memory, GameInput *input, GameOffscreenBuff
     }
     
     DrawRectangle2(buffer, 0, 0, (F32)buffer->width, (F32)buffer->height, 0.0f, 0.0f, 0.0f, 1.0f);
-#if 0
     F32 fill_c = 0.07f;
     F32 out_c = 0.3f;
     F32 rect_a = 0.9f;
@@ -426,5 +421,4 @@ void GameUpdateAndRender(GameMemory *memory, GameInput *input, GameOffscreenBuff
                                fill_c, fill_c, fill_c, rect_a,
                                out_c, out_c, out_c, rect_a,
                                rect_border);
-#endif 
 }

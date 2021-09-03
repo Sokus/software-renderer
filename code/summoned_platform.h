@@ -165,7 +165,7 @@ typedef struct Font
 
 typedef struct FontPack
 {
-    char *font_name;
+    char *name;
     char *filename;
     int size;
     
