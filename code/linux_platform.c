@@ -503,7 +503,7 @@ int main()
              SDL_INIT_HAPTIC);
     TTF_Init();
     
-    FontPack font_pack = { .font_name = "Liberation Mono", .filename = "liberation-mono.ttf", .size = 24 };
+    FontPack font_pack = { .name = "Liberation Mono", .filename = "liberation-mono.ttf", .size = 24 };
     
     if(!SDLMakeAsciiFont(font_pack.filename, font_pack.size, &font_pack.regular, 0))
     {
@@ -522,8 +522,6 @@ int main()
     LinuxAppendToParentDirectoryPath(&linux_state, "summoned.so", source_game_code_dll_path, PATH_MAX);
     LinuxGameCode game_code = LinuxLoadGameCode(source_game_code_dll_path);
     
-    // U64 perf_count_frequency = SDL_GetPerformanceFrequency();
-    
     SDLOpenGameControllers();
     
     SDL_Window *window = SDL_CreateWindow("Summoned",
@@ -532,7 +530,6 @@ int main()
                                           960,
                                           540,
                                           0);
-    
     if(window)
     {
         SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC);
@@ -546,7 +543,6 @@ int main()
             
             SDLWindowDimension dimension = SDLGetWindowDimension(window);
             SDLResizeTexture(&global_backbuffer, renderer, dimension.width, dimension.height);
-            //SDLResizeTexture(&global_backbuffer, renderer, 960, 540);
             
             GameInput input[2] = {0};
             GameInput *new_input = &input[0];
@@ -707,18 +703,14 @@ int main()
                     }
                 }
                 
-                GameOffscreenBuffer buffer = {0};
-                U32 temporary_memory[960*540];
-                buffer.memory = temporary_memory;
-                
-                //buffer.memory = global_backbuffer.memory;
+                GameOffscreenBuffer buffer;
+                buffer.memory = global_backbuffer.memory;
                 buffer.width = global_backbuffer.width;
                 buffer.height = global_backbuffer.height;
                 buffer.pitch = global_backbuffer.pitch;
                 buffer.bytes_per_pixel = global_backbuffer.bytes_per_pixel;
                 
-                
-                
+                U64 game_start = SDL_GetPerformanceCounter();
                 if(game_code.game_update_and_render)
                 {
                     game_code.game_update_and_render(&game_memory, new_input, &buffer, &font_pack);
@@ -748,12 +740,10 @@ int main()
                 
                 SDLUpdateWindow(&global_backbuffer, renderer);
                 
-                printf("%5.2f ms \n", 1000.0f*SDLGetSecondsElapsed(last_counter, work_counter));
+                printf("%5.2f ms \n", 1000.0f*SDLGetSecondsElapsed(game_start, work_counter));
                 
                 U64 end_cycle_count = _rdtsc();
                 U64 cycles_elapsed = end_cycle_count - last_cycle_count;
-                UNUSED(cycles_elapsed);
-                
                 
                 GameInput *temp = new_input;
                 new_input = old_input;
