@@ -7,12 +7,17 @@
 
 
 void
-DrawRectangle(GameOffscreenBuffer *buffer,
-              int min_x, int min_y, int max_x, int max_y,
+DrawRectangle(VideoBuffer *buffer,
+              F32 real_min_x, F32 real_min_y, F32 real_max_x, F32 real_max_y,
               F32 r, F32 g, F32 b, F32 a)
 {
     if(a > 0.0f)
     {
+        int min_x = (int)RoundF32(real_min_x);
+        int min_y = (int)RoundF32(real_min_y);
+        int max_x = (int)RoundF32(real_max_x);
+        int max_y = (int)RoundF32(real_max_y);
+        
         min_x = CLAMP_BOT(min_x, 0);
         min_y = CLAMP_BOT(min_y, 0);
         max_x = CLAMP_TOP(max_x, buffer->width);
@@ -59,32 +64,35 @@ typedef enum BorderStyle
 } BorderStyle;
 
 void
-DrawRectangleExplicit(GameOffscreenBuffer *buffer,
-                      I32 min_x, I32 min_y, I32 max_x, I32 max_y,
+DrawRectangleExplicit(VideoBuffer *buffer,
+                      F32 min_x, F32 min_y, F32 max_x, F32 max_y,
                       F32 fill_r, F32 fill_g, F32 fill_b, F32 fill_a,
                       BorderStyle border_style, I32 border_width,
                       F32 border_r, F32 border_g, F32 border_b, F32 border_a)
 {
-    I32 width = max_x - min_x;
-    I32 height = max_y - min_y;
+    F32 width = max_x - min_x;
+    F32 height = max_y - min_y;
     
-    if(width > 0 && height > 0)
+    // TODO(sokus): Figure out if those functions should even work on floats.
+    F32 float_threshold = 0.01;
+    if(width > float_threshold && height > float_threshold)
     {
-        I32 inside_border = (border_style == BORDERSTYLE_CENTERED ? border_width/2 :
+        F32 inside_border = (border_style == BORDERSTYLE_CENTERED ? border_width/2 :
                              border_style == BORDERSTYLE_INNER ? border_width : 0);
-        I32 outside_border = (border_style == BORDERSTYLE_CENTERED ? border_width/2 :
+        F32 outside_border = (border_style == BORDERSTYLE_CENTERED ? border_width/2 :
                               border_style == BORDERSTYLE_OUTER ? border_width : 0);
         
         if(fill_a > 0.0f
-           && width - 2*inside_border > 0
-           && height - 2*inside_border > 0)
+           && width - 2*inside_border > float_threshold
+           && height - 2*inside_border > float_threshold)
         {
             DrawRectangle(buffer,
                           min_x+inside_border, min_y+inside_border, max_x-inside_border, max_y-inside_border,
                           fill_r, fill_g, fill_b, fill_a);
         }
         
-        if(border_a > 0.0f && (inside_border > 0 || outside_border > 0))
+        if(border_a > 0.0f
+           && (inside_border > float_threshold || outside_border > float_threshold))
         {
             DrawRectangle(buffer,
                           min_x-outside_border, min_y-outside_border, max_x+outside_border, min_y+inside_border,
@@ -104,7 +112,7 @@ DrawRectangleExplicit(GameOffscreenBuffer *buffer,
 }
 
 void
-DebugDrawButtonState(GameOffscreenBuffer *buffer, GameButtonState state,
+DebugDrawButtonState(VideoBuffer *buffer, GameButtonState state,
                      F32 pos_x, F32 pos_y, F32 tile_size)
 {
     F32 r = !!state.ended_down;
@@ -118,7 +126,7 @@ DebugDrawButtonState(GameOffscreenBuffer *buffer, GameButtonState state,
 }
 
 void
-DebugDrawAllControllerButtonStates(GameOffscreenBuffer *buffer, GameControllerInput *controller,
+DebugDrawAllControllerButtonStates(VideoBuffer *buffer, GameControllerInput *controller,
                                    F32 pos_x, F32 pos_y, F32 tile_size)
 {
     V2 position = V2F32(pos_x, pos_y);
@@ -160,49 +168,51 @@ DebugDrawAllControllerButtonStates(GameOffscreenBuffer *buffer, GameControllerIn
 }
 
 void
-DrawAllControllerStates(GameOffscreenBuffer *buffer, GameInput *input)
+DrawAllControllerStates(VideoBuffer *buffer, GameInput *input)
 {
+    F32 tile_size = 20;
+    
     for(size_t controller_index = 0;
         controller_index < ARRAY_COUNT(input->controllers);
         ++controller_index)
     {
         if(input->controllers[controller_index].is_connected)
         {
-            F32 horizontal_index = (F32)(controller_index % 3);
-            F32 vertical_index = (F32)(controller_index / 3);
-            F32 tile_size = 20;
+            int horizontal_index = (controller_index % 3);
+            int vertical_index = (controller_index / 3);
             DebugDrawAllControllerButtonStates(buffer,
                                                &input->controllers[controller_index],
-                                               11*tile_size*horizontal_index, 5*tile_size*vertical_index,
+                                               11.0f*tile_size*(F32)horizontal_index,
+                                               5.0f*tile_size*(F32)vertical_index,
                                                tile_size);
         }
     }
 }
 
 void
-DrawBitmap(GameOffscreenBuffer *buffer,
-           U32 *bitmap_data, U32 bitmap_w, U32 bitmap_h,
-           U32 part_x, U32 part_y, U32 part_w, U32 part_h,
+DrawBitmap(VideoBuffer *buffer,
+           U32 *bitmap_data, uint bitmap_w, uint bitmap_h,
+           F32 part_x, F32 part_y, F32 part_w, F32 part_h,
            F32 pos_x, F32 pos_y,
            F32 r, F32 g, F32 b, F32 a)
 {
     UNUSED(bitmap_h);
     
-    bitmap_data = bitmap_data + part_y*bitmap_w + part_x;
+    bitmap_data = bitmap_data + (uint)part_y*bitmap_w + (uint)part_x;
     
-    I32 min_x = RoundF32ToI32(pos_x);
-    I32 min_y = RoundF32ToI32(pos_y);
-    I32 max_x = RoundF32ToI32(pos_x + part_w);
-    I32 max_y = RoundF32ToI32(pos_y + part_h);;
+    int min_x = (int)RoundF32(pos_x);
+    int min_y = (int)RoundF32(pos_y);
+    int max_x = (int)RoundF32(pos_x + part_w);
+    int max_y = (int)RoundF32(pos_y + part_h);;
     
-    I32 source_offset_x = 0;
+    int source_offset_x = 0;
     if(min_x < 0)
     {
         source_offset_x = -min_x;
         min_x = 0;
     }
     
-    I32 source_offset_y = 0;
+    int source_offset_y = 0;
     if(min_y < 0)
     {
         source_offset_y = -min_y;
@@ -253,13 +263,13 @@ DrawBitmap(GameOffscreenBuffer *buffer,
 }
 
 void
-DrawAsci(GameOffscreenBuffer *buffer, Font *font,
+DrawAsci(VideoBuffer *buffer, Font *font,
          U8 character,
          F32 pos_x, F32 pos_y,
          F32 r, F32 g, F32 b, F32 a)
 {
-    U32 glyph_pos_x = character % font->glyphs_per_row;
-    U32 glyph_pos_y = character / font->glyphs_per_col;
+    uint glyph_pos_x = character % font->glyphs_per_row;
+    uint glyph_pos_y = character / font->glyphs_per_col;
     
     DrawBitmap(buffer,
                font->data, font->w, font->h,
@@ -269,7 +279,7 @@ DrawAsci(GameOffscreenBuffer *buffer, Font *font,
 }
 
 void
-DrawString(GameOffscreenBuffer *buffer, Font *font,
+DrawString(VideoBuffer *buffer, Font *font,
            char *source, size_t source_count,
            F32 pos_x, F32 pos_y,
            F32 r, F32 g, F32 b, F32 a)
@@ -285,32 +295,19 @@ DrawString(GameOffscreenBuffer *buffer, Font *font,
 }
 
 Rect
-RectFromBuffer(GameOffscreenBuffer *buffer)
-{
-    Rect result;
-    
-    result.x0 = 0;
-    result.y0 = 0;
-    result.x1 = buffer->width;
-    result.y1 = buffer->height;
-    
-    return result;
-}
-
-Rect
 RectRelativeExplicit(Rect parent,
                      F32 x0_pct, F32 y0_pct, F32 x1_pct, F32 y1_pct,
                      F32 top, F32 left, F32 bottom, F32 right)
 {
     Rect result;
     
-    F32 parent_width = parent.x1 - parent.x0;
-    F32 parent_height = parent.y1 - parent.y0;
+    result.x0 = parent.x0 + x0_pct*parent.width + left;
+    result.y0 = parent.y0 + y0_pct*parent.height + bottom;
+    result.x1 = parent.x0 + x1_pct*parent.width - right;
+    result.y1 = parent.y0 + y1_pct*parent.height - top;
     
-    result.x0 = parent.x0 + x0_pct*parent_width + left;
-    result.y0 = parent.y0 + y0_pct*parent_height + bottom;
-    result.x1 = parent.x0 + x1_pct*parent_width - right;
-    result.y1 = parent.y0 + y1_pct*parent_height - top;
+    result.width = result.x1 - result.x0;
+    result.height = result.y1 - result.y0;
     
     return result;
 }
@@ -321,13 +318,6 @@ RectRelative(Rect parent, F32 x0_pct, F32 y0_pct, F32 x1_pct, F32 y1_pct)
     Rect result = RectRelativeExplicit(parent, x0_pct, y0_pct, x1_pct, y1_pct, 0, 0, 0, 0);
     return result;
 }
-
-typedef enum SplitType
-{
-    SPLITTYPE_NONE,
-    SPLITTYPE_VERTICAL,
-    SPLITTYPE_HORIZONTAL
-} SplitType;
 
 void
 SplitRectExplicit(Rect parent,
@@ -360,15 +350,41 @@ SplitRect(Rect parent, Rect *rect0, Rect *rect1,
     SplitRectExplicit(parent, split_type, split_pct, rect0, rect1, 0, 0, 0, 0);
 }
 
-#if 0
-String8List
-String8ListFitInRect(MemoryArena *memory_arena, String8List *list, Rect rect, int glyph_w, int glyph_h, F32 spacing_pct)
+Rect
+RectFromVideoBuffer(VideoBuffer *buffer)
 {
+    Rect result;
     
+    result.x0 = 0;
+    result.y0 = 0;
+    result.x1 = buffer->width;
+    result.y1 = buffer->height;
+    
+    result.width = buffer->width;
+    result.height = buffer->height;
+    
+    return result;
 }
-#endif
 
-void GameUpdateAndRender(GameMemory *memory, GameInput *input, GameOffscreenBuffer *buffer, FontPack *font_pack)
+VideoBuffer
+VideoBufferPart(VideoBuffer *parent, int min_x, int min_y, int max_x, int max_y)
+{
+    int min_x_clamped = CLAMP(0, min_x, parent->width);
+    int min_y_clamped = CLAMP(0, min_y, parent->height);
+    int max_x_clamped = CLAMP(min_x_clamped, max_x, parent->width);
+    int max_y_clamped = CLAMP(min_y_clamped, max_y, parent->height);
+    
+    VideoBuffer result = {0};
+    result.memory = parent->memory + (min_y_clamped*parent->pitch) + min_x_clamped*parent->bytes_per_pixel;
+    result.width = max_x_clamped - min_x_clamped;
+    result.height = max_y_clamped - min_y_clamped;
+    result.pitch = parent->pitch;
+    result.bytes_per_pixel = parent->bytes_per_pixel;
+    
+    return result;
+}
+
+void GameUpdateAndRender(GameMemory *memory, GameInput *input, VideoBuffer *buffer, FontPack *font_pack)
 {
     ASSERT((&input->controllers[0].terminator - &input->controllers[0].buttons[0]) ==
            ARRAY_COUNT(input->controllers[0].buttons));
@@ -405,22 +421,30 @@ void GameUpdateAndRender(GameMemory *memory, GameInput *input, GameOffscreenBuff
     
     DrawRectangle(buffer, 0, 0, (F32)buffer->width, (F32)buffer->height, 0, 0, 0, 1);
     
-    Rect screen_rect = RectFromBuffer(buffer);
+    Rect screen_rect = RectFromVideoBuffer(buffer);
     
     Rect left_panel, right_panel;
     SplitRectExplicit(screen_rect, SPLITTYPE_VERTICAL, 0.5f, &left_panel, &right_panel, 5, 5, 5, 5);
     
-    DrawRectangleExplicit(buffer,
-                          left_panel.x0, left_panel.y0, left_panel.x1, left_panel.y1,
-                          0.3f, 0.3f, 0.3f, 0.7f, BORDERSTYLE_INNER, 5, 0.5f, 0.5f, 0.5f, 1.0f);
+    DrawRectangle(buffer,
+                  left_panel.x0, left_panel.y0, left_panel.x1, left_panel.y1,
+                  0.3f, 0.3f, 0.3f, 0.7f);
     
-    DrawRectangleExplicit(buffer,
-                          right_panel.x0, right_panel.y0, right_panel.x1, right_panel.y1,
-                          0.3f, 0.3f, 0.3f, 0.7f, BORDERSTYLE_INNER, 5, 0.5f, 0.5f, 0.5f, 1.0f);
+    DrawRectangle(buffer,
+                  right_panel.x0, right_panel.y0, right_panel.x1, right_panel.y1,
+                  0.3f, 0.3f, 0.3f, 0.7f);
     
-#if 0
     String8 text = STRING8_FROM_LITERAL("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.");
-#endif
-    String8 text = String8PushFormat(&transient_arena, "%f", game_state->time);
-    DrawString(buffer, &font_pack->regular, (char *)text.str, text.size, 20, 20, 1, 1, 1, 1);
+    
+    Rect text_box = RectRelative(left_panel, 0.1f, 0.45f, 0.9f, 0.55f);
+    DrawRectangle(buffer,
+                  text_box.x0, text_box.y0, text_box.x1, text_box.y1,
+                  0.3f, 0.3f, 0.3f, 0.7f);
+    VideoBuffer text_box_buffer = VideoBufferPart(buffer, text_box.x0, text_box.y0, text_box.x1, text_box.y1);
+    Font *font = &font_pack->regular;
+    DrawString(&text_box_buffer, font, (char *)text.str, text.size,
+               10, text_box.height/2 - font->glyph_h/2,
+               1, 1, 1, 1);
+    
+    
 }

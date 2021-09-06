@@ -34,6 +34,8 @@ typedef uint16_t U16;
 typedef uint32_t U32;
 typedef uint64_t U64;
 
+typedef unsigned int uint;
+
 typedef float F32;
 typedef double F64;
 

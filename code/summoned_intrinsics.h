@@ -5,19 +5,10 @@
 
 #include <math.h>
 
-I32
-RoundF32ToI32(F32 value)
+F32 RoundF32(F32 value)
 {
-    I32 result = (I32)roundf(value);
+    F32 result = roundf(value);
     return result;
 }
-
-U32
-RoundF32ToU32(F32 value)
-{
-    U32 result = (U32)roundf(value);
-    return result;
-}
-
 
 #endif //SUMMONED_INTRINSICS_H

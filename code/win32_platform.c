@@ -977,7 +977,7 @@ WinMain(HINSTANCE instance,
                     }
                     
                     
-                    GameOffscreenBuffer buffer = {0};
+                    VideoBuffer buffer = {0};
                     buffer.memory = global_backbuffer.memory;
                     buffer.width = global_backbuffer.width;
                     buffer.height = global_backbuffer.height;

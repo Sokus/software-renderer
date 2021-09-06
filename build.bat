@@ -1,11 +1,12 @@
 @echo off
 
-set common_compiler_flags=-Wall -Wextra -O0 -g -Wl,/incremental:no -fdiagnostics-absolute-paths  -D SUMMONED_DEBUG=1
+set warnings=-Wall -Wextra -fdiagnostics-absolute-paths -Wno-unused-function
+set common_compiler_flags=-O0 -g -Wl,/incremental:no -D SUMMONED_DEBUG=1
 
 set libs=-luser32 -lgdi32 -lwinmm
 
-set win32_compile=clang ..\code\win32_platform.c -o summoned.exe %common_compiler_flags% %libs%
-set game_compile=clang ..\code\summoned.c -o summoned.dll -shared %common_compiler_flags% -Wl,/PDB:summoned_%random%.pdb,/EXPORT:GameUpdateAndRender
+set win32_compile=clang ..\code\win32_platform.c -o summoned.exe %warnings% %common_compiler_flags% %libs%
+set game_compile=clang ..\code\summoned.c -o summoned.dll -shared %warnings% %common_compiler_flags% -Wl,/PDB:summoned_%random%.pdb,/EXPORT:GameUpdateAndRender
 
 if not exist build mkdir build
 pushd build

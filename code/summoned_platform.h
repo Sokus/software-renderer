@@ -3,7 +3,7 @@
 #ifndef SUMMONED_PLATFORM_H
 #define SUMMONED_PLATFORM_H
 
-typedef struct GameOffscreenBuffer
+typedef struct VideoBuffer
 {
     // NOTE(casey): Pixels are always 32-bits wide, Memory Order BB GG RR XX
     void *memory;
@@ -11,7 +11,7 @@ typedef struct GameOffscreenBuffer
     int height;
     int pitch;
     int bytes_per_pixel;
-} GameOffscreenBuffer;
+} VideoBuffer;
 
 typedef struct GameMemory
 {
@@ -75,7 +75,7 @@ typedef struct GameInput
 } GameInput;
 
 GameControllerInput *
-GetController(GameInput *input, unsigned int controller_index)
+GetController(GameInput *input, uint controller_index)
 {
     U32 count = ARRAY_COUNT(input->controllers);
     ASSERT(controller_index < count);
@@ -115,7 +115,7 @@ typedef struct FontPack
 
 typedef void GameUpdateAndRenderType(GameMemory *memory,
                                      GameInput *input,
-                                     GameOffscreenBuffer *buffer,
+                                     VideoBuffer *buffer,
                                      FontPack *font_pack);
 
 #endif //SUMMONED_PLATFORM_H
