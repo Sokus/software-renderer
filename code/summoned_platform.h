@@ -113,41 +113,6 @@ typedef struct FontPack
     // Font bold;
 } FontPack;
 
-#if 0
-void
-CatStrings(size_t source_a_count, char *source_a,
-           size_t source_b_count, char *source_b,
-           size_t dest_count, char *dest)
-{
-    for(size_t index = 0;
-        index < source_a_count && index < dest_count;
-        ++index)
-    {
-        *dest++ = *source_a++;
-    }
-    
-    for(size_t index = 0;
-        index < source_b_count && index + source_a_count < dest_count;
-        ++index)
-    {
-        *dest++ = *source_b++;
-    }
-    
-    *dest = 0;
-}
-size_t
-StringLength(char *string)
-{
-    size_t count = 0;
-    while(*string++)
-    {
-        ++count;
-    }
-    
-    return count;
-}
-#endif
-
 typedef void GameUpdateAndRenderType(GameMemory *memory,
                                      GameInput *input,
                                      GameOffscreenBuffer *buffer,

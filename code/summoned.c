@@ -418,9 +418,9 @@ void GameUpdateAndRender(GameMemory *memory, GameInput *input, GameOffscreenBuff
                           right_panel.x0, right_panel.y0, right_panel.x1, right_panel.y1,
                           0.3f, 0.3f, 0.3f, 0.7f, BORDERSTYLE_INNER, 5, 0.5f, 0.5f, 0.5f, 1.0f);
     
+#if 0
     String8 text = STRING8_FROM_LITERAL("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.");
-    
-    
-    
-    
+#endif
+    String8 text = String8PushFormat(&transient_arena, "%f", game_state->time);
+    DrawString(buffer, &font_pack->regular, (char *)text.str, text.size, 20, 20, 1, 1, 1, 1);
 }

@@ -10,6 +10,8 @@
 
 //~NOTE(sokus): necessary includes
 #include <string.h> // memcpy, memset
+#include <stdio.h> // vsnprintf
+#include <stdarg.h> // variadic arguments
 
 //~NOTE(sokus): keywords
 #define internal static
@@ -135,16 +137,27 @@ InitializeArena(MemoryArena *arena, U8 *base, size_t size)
     arena->used = 0;
 }
 
-#define PUSH_STRUCT(arena, type) (type *)PushSize_(arena, sizeof(type))
-#define PUSH_ARRAY(arena, type, count) (type *)PushSize_(arena, (count)*sizeof(type)) 
+#define PUSH_STRUCT(arena, type) (type *)MemoryArenaPushSize(arena, sizeof(type))
+#define PUSH_ARRAY(arena, type, count) (type *)MemoryArenaPushSize(arena, (count)*sizeof(type)) 
 
 void *
-PushSize_(MemoryArena *arena, size_t size)
+MemoryArenaPushSize(MemoryArena *arena, size_t size)
 {
     ASSERT((arena->used + size) <= arena->size);
     void *result = arena->base + arena->used;
     arena->used += size;
     
+    return result;
+}
+
+void *
+MemoryArenaPopSize(MemoryArena *arena, size_t size)
+{
+    ASSERT(size > 0);
+    size_t new_used = arena->used - size;
+    ASSERT(new_used >= 0);
+    arena->used = new_used;
+    void *result = arena->base + new_used;
     return result;
 }
 
@@ -183,9 +196,16 @@ typedef struct String8
     size_t size;
 } String8;
 
-String8 String8FromArray(U8 *arr, size_t size)
+String8 String8FromBuffer(U8 *buffer, size_t size)
 {
-    String8 result = { arr, size };
+    String8 result = { buffer, size };
+    return result;
+}
+
+String8 String8FromRange(U8 *first, U8 *opl)
+{
+    size_t size = (size_t)(opl - first);
+    String8 result = { first, size };
     return result;
 }
 
@@ -195,7 +215,9 @@ String8 String8FromCString(char *cstr)
     return result;
 }
 
-#define STRING8_FROM_LITERAL(literal) String8FromArray((U8 *)(literal), sizeof(literal) - 1)
+#define STRING8_FROM_LITERAL(literal) String8FromBuffer((U8 *)(literal), sizeof(literal) - 1)
+
+#define STRING8_EXPAND(string8) ((string8).str), (size_t)((string8).size)
 
 String8 String8Prefix(String8 str, size_t size)
 {
@@ -228,12 +250,12 @@ String8 String8Chop(String8 str, size_t size)
     return result;
 }
 
-String8 String8Substr(String8 str, size_t start, size_t end)
+String8 String8Substr(String8 str, size_t first, size_t opl)
 {
-    size_t start_clamped = CLAMP(0, start, str.size);
-    size_t end_clamped = CLAMP(start_clamped, end, str.size);
-    size_t size_remaining = end_clamped - start_clamped;
-    String8 result = { str.str+start_clamped, size_remaining };
+    size_t first_clamped = CLAMP(0, first, str.size);
+    size_t opl_clamped = CLAMP(0, opl, str.size + 1);
+    size_t substr_size = opl_clamped - first_clamped - 1;
+    String8 result = { str.str+first_clamped, substr_size };
     return result;
 }
 
@@ -280,7 +302,6 @@ void String8ListPush(MemoryArena *arena, String8List *list, String8 string)
     String8ListPushExplicit(list, string, node);
 }
 
-#if 0
 String8 String8ListJoin(MemoryArena *arena, String8List *list, String8Join *join_optional)
 {
     String8Join dummy_join = {0};
@@ -295,11 +316,140 @@ String8 String8ListJoin(MemoryArena *arena, String8List *list, String8Join *join
                    join->mid.size * (list->node_count - 1) +
                    list->total_size);
     
-    U8 *str = PUSH_ARRAY(arena, U8, size + 1);
+    U8 *str = PUSH_ARRAY(arena, U8, size);
+    String8 result = { str, size };
+    
     U8 *ptr = str;
     
+    memcpy(ptr, join->pre.str, join->pre.size);
+    ptr += join->pre.size;
     
+    bool is_mid = false;
+    for(String8Node *node = list->first;
+        node != 0;
+        node = node->next)
+    {
+        if(is_mid)
+        {
+            memcpy(ptr, join->mid.str, join->mid.size);
+            ptr += join->mid.size;
+        }
+        
+        memcpy(ptr, node->string.str, node->string.size);
+        ptr += node->string.size;
+        
+        if(node->next != 0)
+        {
+            is_mid = true;
+        }
+        else
+        {
+            is_mid = false;
+            
+            memcpy(ptr, join->post.str, join->post.size);
+            ptr += join->post.size;
+        }
+    }
+    
+    return result;
 }
-#endif
+
+String8List String8ListSplit(MemoryArena *arena, String8 string, U8 *split_characters, size_t split_characters_count)
+{
+    String8List result = {0};
+    
+    U8 *ptr = string.str;
+    U8 *word_first = ptr;
+    U8 *opl = string.str + string.size;
+    for(;ptr < opl; ptr += 1)
+    {
+        U8 byte = *ptr;
+        bool is_split_byte = false;
+        for(size_t index = 0;
+            index < split_characters_count;
+            ++index)
+        {
+            if(byte == split_characters[index])
+            {
+                is_split_byte = true;
+                break;
+            }
+        }
+        
+        if(is_split_byte)
+        {
+            if(word_first < ptr)
+            {
+                String8ListPush(arena, &result, String8FromRange(word_first, ptr));
+            }
+            
+            word_first = ptr + 1;
+        }
+    }
+    
+    if(word_first < ptr)
+    {
+        String8ListPush(arena, &result, String8FromRange(word_first, ptr));
+    }
+    
+    return result;
+}
+
+String8 String8PushFormatVariadic(MemoryArena *arena, char *format, va_list args)
+{
+    // in case we need to try a second time
+    va_list args2;
+    va_copy(args2, args);
+    
+    // try to build the string in 1024 bytes
+    size_t buffer_size = 1024;
+    U8 *buffer = PUSH_ARRAY(arena, U8, buffer_size);
+    int vsnprintf_outcome = vsnprintf((char *)buffer, buffer_size, format, args);
+    ASSERT(vsnprintf_outcome >= 0);
+    size_t actual_size = (size_t)vsnprintf_outcome;
+    
+    String8 result = {0};
+    if(actual_size < buffer_size)
+    {
+        // if first try worked put back what we didn't use and finish
+        MemoryArenaPopSize(arena, buffer_size - actual_size);
+        result = String8FromBuffer(buffer, actual_size);
+    }
+    else
+    {
+        // if first try failed, reset and try again with correct size
+        MemoryArenaPopSize(arena, buffer_size);
+        U8 *fixed_buffer = PUSH_ARRAY(arena, U8, actual_size + 1);
+        vsnprintf_outcome = vsnprintf((char *)fixed_buffer, actual_size + 1, format, args2);
+        ASSERT(vsnprintf_outcome >= 0);
+        size_t final_size = (size_t)vsnprintf_outcome;
+        
+        // NOTE(sokus): Get rid of null termination character, we don't use it at the moment.
+        MemoryArenaPopSize(arena, 1);
+        result = String8FromBuffer(fixed_buffer, final_size);
+    }
+    
+    va_end(args2);
+    
+    return result;
+}
+
+String8 String8PushFormat(MemoryArena *arena, char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    String8 result = String8PushFormatVariadic(arena, format, args);
+    va_end(args);
+    return result;
+}
+
+void String8ListPushFormat(MemoryArena *arena, String8List *list, char *format, ...)
+{
+    va_list args;
+    va_start(args, format);
+    String8 string = String8PushFormatVariadic(arena, format, args);
+    va_end(args);
+    String8ListPush(arena, list, string);
+}
 
 #endif //BASE_H
