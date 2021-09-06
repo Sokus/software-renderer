@@ -1,6 +1,6 @@
 @echo off
 
-set common_compiler_flags=-Wall -Wextra -O3 -Wl,/incremental:no -fdiagnostics-absolute-paths  -D SUMMONED_DEBUG=1
+set common_compiler_flags=-Wall -Wextra -O0 -g -Wl,/incremental:no -fdiagnostics-absolute-paths  -D SUMMONED_DEBUG=1
 
 set libs=-luser32 -lgdi32 -lwinmm
 

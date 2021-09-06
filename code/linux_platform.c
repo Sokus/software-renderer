@@ -1,14 +1,16 @@
+#include "base.h"
+
 #include "summoned_platform.h"
 #include "summoned_intrinsics.h"
 
 #include "summoned_font_maps.c"
 
 #include <stdio.h>
-#include <time.h>
+#include <time.h> 
 #include <sys/mman.h> // mmap
 #include <sys/stat.h> // stat
 #include <linux/limits.h> 
-#include <x86intrin.h>
+#include <x86intrin.h> // _rdtsc
 #include <unistd.h>
 #include <dlfcn.h> // dlopen, dlsym, dlclose
 
@@ -21,7 +23,7 @@
 global SDLOffscreenBuffer global_backbuffer = { .bytes_per_pixel = 4 };
 global bool global_is_running;
 
-#define MAX_CONTROLLERS 0
+#define MAX_CONTROLLERS 4
 global SDL_GameController *global_controller_handles[MAX_CONTROLLERS];
 global SDL_Haptic *global_rumble_handles[MAX_CONTROLLERS];
 
@@ -348,9 +350,9 @@ internal void
 LinuxAppendToParentDirectoryPath(LinuxState *state, char *filename, char *dest, size_t dest_count)
 {
     size_t path_count = (state->one_past_last_exe_path_slash - state->exe_path);
-    CatStrings(path_count, state->exe_path,
-               StringLength(filename), filename,
-               dest_count, dest);
+    ConcatenateStrings(state->exe_path, path_count,
+                       filename, StringLength(filename),
+                       dest, dest_count);
 }
 
 
@@ -503,7 +505,7 @@ int main()
              SDL_INIT_HAPTIC);
     TTF_Init();
     
-    FontPack font_pack = { .name = "Liberation Mono", .filename = "liberation-mono.ttf", .size = 24 };
+    FontPack font_pack = { .font_name = "Liberation Mono", .filename = "liberation-mono.ttf", .size = 24 };
     
     if(!SDLMakeAsciiFont(font_pack.filename, font_pack.size, &font_pack.regular, 0))
     {
@@ -522,6 +524,8 @@ int main()
     LinuxAppendToParentDirectoryPath(&linux_state, "summoned.so", source_game_code_dll_path, PATH_MAX);
     LinuxGameCode game_code = LinuxLoadGameCode(source_game_code_dll_path);
     
+    // U64 perf_count_frequency = SDL_GetPerformanceFrequency();
+    
     SDLOpenGameControllers();
     
     SDL_Window *window = SDL_CreateWindow("Summoned",
@@ -530,6 +534,7 @@ int main()
                                           960,
                                           540,
                                           0);
+    
     if(window)
     {
         SDL_Renderer *renderer = SDL_CreateRenderer(window, -1, SDL_RENDERER_PRESENTVSYNC);
@@ -543,6 +548,7 @@ int main()
             
             SDLWindowDimension dimension = SDLGetWindowDimension(window);
             SDLResizeTexture(&global_backbuffer, renderer, dimension.width, dimension.height);
+            //SDLResizeTexture(&global_backbuffer, renderer, 960, 540);
             
             GameInput input[2] = {0};
             GameInput *new_input = &input[0];
@@ -570,7 +576,6 @@ int main()
             game_memory.permanent_storage = linux_state.game_memory_block;
             game_memory.transient_storage = ((U8 *)(linux_state.game_memory_block) +
                                              game_memory.permanent_storage_size); 
-            
             
             U64 last_counter = SDL_GetPerformanceCounter();
             U64 last_cycle_count = _rdtsc();
@@ -605,7 +610,6 @@ int main()
                 {
                     SDLHandleEvent(&event, new_keyboard_controller);
                 }
-                
                 
                 for(int controller_index = 0;
                     controller_index < MAX_CONTROLLERS;
@@ -703,14 +707,12 @@ int main()
                     }
                 }
                 
-                GameOffscreenBuffer buffer;
                 buffer.memory = global_backbuffer.memory;
                 buffer.width = global_backbuffer.width;
                 buffer.height = global_backbuffer.height;
                 buffer.pitch = global_backbuffer.pitch;
                 buffer.bytes_per_pixel = global_backbuffer.bytes_per_pixel;
                 
-                U64 game_start = SDL_GetPerformanceCounter();
                 if(game_code.game_update_and_render)
                 {
                     game_code.game_update_and_render(&game_memory, new_input, &buffer, &font_pack);
@@ -739,8 +741,6 @@ int main()
                 }
                 
                 SDLUpdateWindow(&global_backbuffer, renderer);
-                
-                printf("%5.2f ms \n", 1000.0f*SDLGetSecondsElapsed(game_start, work_counter));
                 
                 U64 end_cycle_count = _rdtsc();
                 U64 cycles_elapsed = end_cycle_count - last_cycle_count;

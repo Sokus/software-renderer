@@ -1,8 +1,9 @@
+#include "base.h"
+
 #include "summoned_platform.h"
 
 #include <windows.h>
 #include <xinput.h>
-#include <stdio.h>
 
 #include "win32_platform.h"
 
@@ -70,9 +71,9 @@ internal void
 Win32BuildEXEPathFilename(Win32State *state, char *filename, int dest_count, char *dest)
 {
     size_t path_count = (state->one_past_last_exe_path_slash - state->exe_path);
-    CatStrings(path_count, state->exe_path,
-               StringLength(filename), filename,
-               dest_count, dest);
+    ConcatenateStrings(state->exe_path, path_count,
+                       filename, StringLength(filename),
+                       dest, dest_count);
 }
 
 FILETIME
@@ -168,8 +169,8 @@ Win32MakeAsciiFont(char *font_name_utf8, int font_size, Font *out_font, FontRast
     int height = font_size;
     
     DWORD out_precision = raster_font ? OUT_RASTER_PRECIS : OUT_DEFAULT_PRECIS;
-    DWORD quality = raster_font ? NONANTIALIASED_QUALITY : PROOF_QUALITY;
-    int font_weight = bold ? FW_BOLD : FW_NORMAL;
+    DWORD quality = raster_font ? NONANTIALIASED_QUALITY : DRAFT_QUALITY;
+    int font_weight = bold ? 1000 : FW_NORMAL;
     
     HFONT font = CreateFontA(height, 0, 0, 0,
                              font_weight,
@@ -193,7 +194,7 @@ Win32MakeAsciiFont(char *font_name_utf8, int font_size, Font *out_font, FontRast
         }
         
         SIZE size;
-        if (!GetTextExtentPoint32A(font_dc, "M", 1, &size))
+        if (!GetTextExtentPoint32A(font_dc, "W", 1, &size))
         {
             INVALID_CODE_PATH;
         }
@@ -235,10 +236,18 @@ Win32MakeAsciiFont(char *font_name_utf8, int font_size, Font *out_font, FontRast
             U32 *pixels = out_font->data;
             for(int i=0; i<out_font->pitch*out_font->h; ++i)
             {
+                U32 pixel_value = *(pixels+i);
+                int r = (pixel_value >> 16) & 0xFF;
+                int g = (pixel_value >> 8) & 0xFF;
+                int b = (pixel_value >> 0) & 0xFF;
+#if 0
                 if(*(pixels+i))
                 {
                     *(pixels+i) |= 0xFF000000;
                 }
+#endif
+                *(pixels+i) |= ((r+g+b)/3) << 24;
+                
             }
             
             result = true;
@@ -773,7 +782,7 @@ WinMain(HINSTANCE instance,
             game_memory.transient_storage = ((U8 *)game_memory.permanent_storage +
                                              game_memory.permanent_storage_size);
             
-            FontPack font_pack = { .name = "Liberation Mono", .filename="liberation-mono.ttf", .size = 24 };
+            FontPack font_pack = { .name = "Liberation Mono", .filename="liberation-mono.ttf", .size = 16 };
             char font_path[MAX_PATH];
             Win32BuildEXEPathFilename(&win32_state, font_pack.filename,
                                       sizeof(font_path), font_path);
@@ -785,17 +794,17 @@ WinMain(HINSTANCE instance,
             
             
             if(!Win32MakeAsciiFont(font_pack.name, font_pack.size, &font_pack.regular,
-                                   FONT_RASTER_FLAG_RASTER_FONT))
+                                   0))
             {
                 INVALID_CODE_PATH;
             }
-            
+#if 0
             if(!Win32MakeAsciiFont(font_pack.name, font_pack.size, &font_pack.bold,
-                                   FONT_RASTER_FLAG_RASTER_FONT|FONT_RASTER_FLAG_BOLD))
+                                   FONT_RASTER_FLAG_BOLD))
             {
                 INVALID_CODE_PATH;
             }
-            
+#endif
             if(game_memory.permanent_storage && game_memory.transient_storage)
             {
                 LARGE_INTEGER last_counter = Win32GetWallClock();

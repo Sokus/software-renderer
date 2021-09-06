@@ -1,140 +1,106 @@
+#include "base.h"
 #include "summoned_platform.h"
 #include "summoned_math.h"
 #include "summoned_intrinsics.h"
 
 #include "summoned.h"
 
-#include <stdio.h>
 
 void
 DrawRectangle(GameOffscreenBuffer *buffer,
-              F32 real_min_x, F32 real_min_y, F32 real_max_x, F32 real_max_y,
+              int min_x, int min_y, int max_x, int max_y,
               F32 r, F32 g, F32 b, F32 a)
 {
-    int min_x = RoundF32ToI32(real_min_x);
-    int min_y = RoundF32ToI32(real_min_y);
-    int max_x = RoundF32ToI32(real_max_x);
-    int max_y = RoundF32ToI32(real_max_y);
-    
-    min_x = CLAMP_BOT(min_x, 0);
-    min_y = CLAMP_BOT(min_y, 0);
-    max_x = CLAMP_TOP(max_x, buffer->width);
-    max_y = CLAMP_TOP(max_y, buffer->height);
-    
-    U8 *dest_row = (U8 *)buffer->memory + min_y*buffer->pitch + min_x*buffer->bytes_per_pixel;
-    
-    for(int y = min_y;
-        y < max_y;
-        ++y)
+    if(a > 0.0f)
     {
-        U32 *dest = (U32 *)dest_row;
+        min_x = CLAMP_BOT(min_x, 0);
+        min_y = CLAMP_BOT(min_y, 0);
+        max_x = CLAMP_TOP(max_x, buffer->width);
+        max_y = CLAMP_TOP(max_y, buffer->height);
         
-        for(int x = min_x;
-            x < max_x;
-            ++x)
+        U8 *dest_row = (U8 *)buffer->memory + min_y*buffer->pitch + min_x*buffer->bytes_per_pixel;
+        U8 *dest;
+        
+        for(int y = min_y;
+            y < max_y;
+            ++y)
         {
-            F32 dest_r = (F32)((*dest >> 16) & 0xFF) / 255.0f;
-            F32 dest_g = (F32)((*dest >> 8) & 0xFF) / 255.0f;
-            F32 dest_b = (F32)((*dest >> 0) & 0xFF) / 255.0f;
             
-            F32 new_r = (a*r + (1.0f-a)*dest_r)*255.0f;
-            F32 new_g = (a*g + (1.0f-a)*dest_g)*255.0f;
-            F32 new_b = (a*b + (1.0f-a)*dest_b)*255.0f;
+            dest = dest_row;
             
-            *dest = (((U32)(new_r + 0.5f) << 16) |
-                     ((U32)(new_g + 0.5f) << 8) |
-                     ((U32)(new_b + 0.5f) << 0));
-            ++dest;
+            for(int x = min_x;
+                x < max_x;
+                ++x)
+            {
+                *dest = (U8)((a*b*255.0f) + ((F32)(*dest)*(1.0f-a)));
+                ++dest;
+                
+                *dest = (U8)((a*g*255.0f) + ((F32)(*dest)*(1.0f-a)));
+                ++dest;
+                
+                *dest = (U8)((a*r*255.0f) + ((F32)(*dest)*(1.0f-a)));
+                ++dest;
+                
+                ++dest;
+            }
+            
+            dest_row += buffer->pitch;
         }
-        
-        dest_row += buffer->pitch;
     }
 }
 
-void
-DrawRectangle2(GameOffscreenBuffer *buffer,
-               F32 real_min_x, F32 real_min_y, F32 real_max_x, F32 real_max_y,
-               F32 r, F32 g, F32 b, F32 a)
+typedef enum BorderStyle
 {
-    int min_x = RoundF32ToI32(real_min_x);
-    int min_y = RoundF32ToI32(real_min_y);
-    int max_x = RoundF32ToI32(real_max_x);
-    int max_y = RoundF32ToI32(real_max_y);
-    
-    min_x = CLAMP_BOT(min_x, 0);
-    min_y = CLAMP_BOT(min_y, 0);
-    max_x = CLAMP_TOP(max_x, buffer->width);
-    max_y = CLAMP_TOP(max_y, buffer->height);
-    
-    U8 *dest_row = (U8 *)buffer->memory + min_y*buffer->pitch + min_x*buffer->bytes_per_pixel;
-    U8 *dest;
-    
-    for(int y = min_y;
-        y < max_y;
-        ++y)
-    {
-        
-        dest = dest_row;
-        
-        for(int x = min_x;
-            x < max_x;
-            ++x)
-        {
-            *dest = (U8)((a*b*255.0f) + ((F32)(*dest)*(1.0f-a)));
-            ++dest;
-            
-            *dest = (U8)((a*g*255.0f) + ((F32)(*dest)*(1.0f-a)));
-            ++dest;
-            
-            *dest = (U8)((a*r*255.0f) + ((F32)(*dest)*(1.0f-a)));
-            ++dest;
-            
-            ++dest;
-        }
-        
-        dest_row += buffer->pitch;
-    }
-}
+    BORDERSTYLE_NONE = 0,
+    BORDERSTYLE_CENTERED = 1,
+    BORDERSTYLE_INNER = 2,
+    BORDERSTYLE_OUTER = 3,
+    BORDERSTYLE_DEFAULT = 2
+} BorderStyle;
 
 void
-DrawRectangleOutline(GameOffscreenBuffer *buffer,
-                     F32 real_min_x, F32 real_min_y, F32 real_max_x, F32 real_max_y,
-                     F32 r, F32 g, F32 b, F32 a,
-                     F32 border)
+DrawRectangleExplicit(GameOffscreenBuffer *buffer,
+                      I32 min_x, I32 min_y, I32 max_x, I32 max_y,
+                      F32 fill_r, F32 fill_g, F32 fill_b, F32 fill_a,
+                      BorderStyle border_style, I32 border_width,
+                      F32 border_r, F32 border_g, F32 border_b, F32 border_a)
 {
-    F32 width = real_max_x - real_min_x;
-    F32 height = real_max_y - real_min_y;
+    I32 width = max_x - min_x;
+    I32 height = max_y - min_y;
     
     if(width > 0 && height > 0)
     {
-        if(2*border >= width || 2*border >= height)
+        I32 inside_border = (border_style == BORDERSTYLE_CENTERED ? border_width/2 :
+                             border_style == BORDERSTYLE_INNER ? border_width : 0);
+        I32 outside_border = (border_style == BORDERSTYLE_CENTERED ? border_width/2 :
+                              border_style == BORDERSTYLE_OUTER ? border_width : 0);
+        
+        if(fill_a > 0.0f
+           && width - 2*inside_border > 0
+           && height - 2*inside_border > 0)
         {
-            DrawRectangle(buffer, real_min_x, real_min_y, real_max_x, real_max_y, r, g, b, a);
+            DrawRectangle(buffer,
+                          min_x+inside_border, min_y+inside_border, max_x-inside_border, max_y-inside_border,
+                          fill_r, fill_g, fill_b, fill_a);
         }
-        else
+        
+        if(border_a > 0.0f && (inside_border > 0 || outside_border > 0))
         {
-            DrawRectangle(buffer, real_min_x, real_min_y, real_max_x, real_min_y+border, r, g, b, a);
-            DrawRectangle(buffer, real_min_x, real_min_y+border, real_min_x+border, real_max_y-border, r, g, b, a);
-            DrawRectangle(buffer, real_max_x-border, real_min_y+border, real_max_x, real_max_y-border, r, g, b, a);
-            DrawRectangle(buffer, real_min_x, real_max_y-border, real_max_x, real_max_y, r, g, b, a);
+            DrawRectangle(buffer,
+                          min_x-outside_border, min_y-outside_border, max_x+outside_border, min_y+inside_border,
+                          border_r, border_g, border_b, border_a);
+            DrawRectangle(buffer,
+                          min_x-outside_border, min_y+inside_border, min_x+inside_border, max_y-inside_border,
+                          border_r, border_g, border_b, border_a);
+            DrawRectangle(buffer,
+                          min_x-outside_border, max_y-inside_border, max_x+outside_border, max_y+outside_border,
+                          border_r, border_g, border_b, border_a);
+            DrawRectangle(buffer,
+                          max_x-inside_border, min_y+inside_border, max_x+outside_border, max_y-inside_border,
+                          border_r, border_g, border_b, border_a);
         }
+        
     }
-}
-
-void DrawRectangleOutlineFilled(GameOffscreenBuffer *buffer,
-                                F32 real_min_x, F32 real_min_y, F32 real_max_x, F32 real_max_y,
-                                F32 fill_r, F32 fill_g, F32 fill_b, F32 fill_a,
-                                F32 outline_r, F32 outline_g, F32 outline_b, F32 outline_a,
-                                F32 outline_thickness)
-{
-    DrawRectangle(buffer, 
-                  real_min_x+outline_thickness, real_min_y+outline_thickness,
-                  real_max_x-outline_thickness, real_max_y-outline_thickness,
-                  fill_r, fill_g, fill_b, fill_a);
-    DrawRectangleOutline(buffer,
-                         real_min_x, real_min_y, real_max_x, real_max_y,
-                         outline_r, outline_g, outline_b, outline_a,
-                         outline_thickness);
 }
 
 void
@@ -318,7 +284,8 @@ DrawString(GameOffscreenBuffer *buffer, Font *font,
     }
 }
 
-Rect GetScreenRect(GameOffscreenBuffer *buffer)
+Rect
+RectFromBuffer(GameOffscreenBuffer *buffer)
 {
     Rect result;
     
@@ -330,9 +297,10 @@ Rect GetScreenRect(GameOffscreenBuffer *buffer)
     return result;
 }
 
-Rect GetRectRelativeImplicit(Rect parent,
-                             F32 x0_pct, F32 y0_pct, F32 x1_pct, F32 y1_pct,
-                             F32 top, F32 left, F32 bottom, F32 right)
+Rect
+RectRelativeExplicit(Rect parent,
+                     F32 x0_pct, F32 y0_pct, F32 x1_pct, F32 y1_pct,
+                     F32 top, F32 left, F32 bottom, F32 right)
 {
     Rect result;
     
@@ -347,11 +315,58 @@ Rect GetRectRelativeImplicit(Rect parent,
     return result;
 }
 
-Rect GetRectRelative(Rect parent, F32 x0_pct, F32 y0_pct, F32 x1_pct, F32 y1_pct)
+Rect
+RectRelative(Rect parent, F32 x0_pct, F32 y0_pct, F32 x1_pct, F32 y1_pct)
 {
-    Rect result = GetRectRelativeImplicit(parent, x0_pct, y0_pct, x1_pct, y1_pct, 0, 0, 0, 0);
+    Rect result = RectRelativeExplicit(parent, x0_pct, y0_pct, x1_pct, y1_pct, 0, 0, 0, 0);
     return result;
 }
+
+typedef enum SplitType
+{
+    SPLITTYPE_NONE,
+    SPLITTYPE_VERTICAL,
+    SPLITTYPE_HORIZONTAL
+} SplitType;
+
+void
+SplitRectExplicit(Rect parent,
+                  SplitType split_type, F32 split_pct,
+                  Rect *rect0, Rect *rect1,
+                  F32 top, F32 left, F32 bottom, F32 right)
+{
+    switch(split_type)
+    {
+        case SPLITTYPE_VERTICAL:
+        {
+            *rect0 = RectRelativeExplicit(parent, 0, 0, split_pct, 1, top, left, bottom, right);
+            *rect1 = RectRelativeExplicit(parent, split_pct, 0, 1, 1, top, left, bottom, right);
+        } break;
+        
+        case SPLITTYPE_HORIZONTAL:
+        {
+            *rect0 = RectRelativeExplicit(parent, 0, 0, 1, split_pct, top, left, bottom, right);
+            *rect1 = RectRelativeExplicit(parent, 0, split_pct, 1, 1, top, left, bottom, right);
+        } break;
+        
+        default: { } break;
+    }
+}
+
+void
+SplitRect(Rect parent, Rect *rect0, Rect *rect1,
+          SplitType split_type, F32 split_pct)
+{
+    SplitRectExplicit(parent, split_type, split_pct, rect0, rect1, 0, 0, 0, 0);
+}
+
+#if 0
+String8List
+String8ListFitInRect(MemoryArena *memory_arena, String8List *list, Rect rect, int glyph_w, int glyph_h, F32 spacing_pct)
+{
+    
+}
+#endif
 
 void GameUpdateAndRender(GameMemory *memory, GameInput *input, GameOffscreenBuffer *buffer, FontPack *font_pack)
 {
@@ -370,8 +385,15 @@ void GameUpdateAndRender(GameMemory *memory, GameInput *input, GameOffscreenBuff
                         (U8 *)memory->permanent_storage + sizeof(GameState),
                         0);
         
+        
         memory->is_initialized = true;
     }
+    
+    MemoryArena transient_arena;
+    InitializeArena(&transient_arena,
+                    (U8 *)memory->transient_storage,
+                    5000);
+    
     
     game_state->time += input->dt_for_frame;
     
@@ -381,44 +403,24 @@ void GameUpdateAndRender(GameMemory *memory, GameInput *input, GameOffscreenBuff
         game_state->position_x = 0;
     }
     
-    DrawRectangle2(buffer, 0, 0, (F32)buffer->width, (F32)buffer->height, 0.0f, 0.0f, 0.0f, 1.0f);
-    F32 fill_c = 0.07f;
-    F32 out_c = 0.3f;
-    F32 rect_a = 0.9f;
-    F32 rect_border = 4;
+    DrawRectangle(buffer, 0, 0, (F32)buffer->width, (F32)buffer->height, 0, 0, 0, 1);
     
-    Rect screen_rect = GetScreenRect(buffer);
-    Rect panel_l0 = GetRectRelativeImplicit(screen_rect, 0, 0, 0.5f, 1.0f,
-                                            0, 0, 0, 5);
-    Rect panel_r0 = GetRectRelativeImplicit(screen_rect, 0.5f, 0.5f, 1.0f, 1.0f,
-                                            0, 5, 5, 0);
-    Rect panel_r1 = GetRectRelativeImplicit(screen_rect, 0.5f, 0, 1.0f, 0.5f,
-                                            5, 5, 0, 0);
-    Rect panel_m = GetRectRelativeImplicit(screen_rect, 0.4f, 0, 1.0f, 0.25f,
-                                           0, 10+rect_border, 10+rect_border, 10+rect_border);
+    Rect screen_rect = RectFromBuffer(buffer);
     
-    DrawRectangleOutlineFilled(buffer,
-                               panel_l0.x0, buffer->height-panel_l0.y1,
-                               panel_l0.x1, buffer->height-panel_l0.y0,
-                               fill_c, fill_c, fill_c, rect_a,
-                               out_c, out_c, out_c, rect_a,
-                               rect_border);
-    DrawRectangleOutlineFilled(buffer,
-                               panel_r0.x0, buffer->height-panel_r0.y1,
-                               panel_r0.x1, buffer->height-panel_r0.y0,
-                               fill_c, fill_c, fill_c, rect_a,
-                               out_c, out_c, out_c, rect_a,
-                               rect_border);
-    DrawRectangleOutlineFilled(buffer,
-                               panel_r1.x0, buffer->height-panel_r1.y1,
-                               panel_r1.x1, buffer->height-panel_r1.y0,
-                               fill_c, fill_c, fill_c, rect_a,
-                               out_c, out_c, out_c, rect_a,
-                               rect_border);
-    DrawRectangleOutlineFilled(buffer,
-                               panel_m.x0, buffer->height-panel_m.y1,
-                               panel_m.x1, buffer->height-panel_m.y0,
-                               fill_c, fill_c, fill_c, rect_a,
-                               out_c, out_c, out_c, rect_a,
-                               rect_border);
+    Rect left_panel, right_panel;
+    SplitRectExplicit(screen_rect, SPLITTYPE_VERTICAL, 0.5f, &left_panel, &right_panel, 5, 5, 5, 5);
+    
+    DrawRectangleExplicit(buffer,
+                          left_panel.x0, left_panel.y0, left_panel.x1, left_panel.y1,
+                          0.3f, 0.3f, 0.3f, 0.7f, BORDERSTYLE_INNER, 5, 0.5f, 0.5f, 0.5f, 1.0f);
+    
+    DrawRectangleExplicit(buffer,
+                          right_panel.x0, right_panel.y0, right_panel.x1, right_panel.y1,
+                          0.3f, 0.3f, 0.3f, 0.7f, BORDERSTYLE_INNER, 5, 0.5f, 0.5f, 0.5f, 1.0f);
+    
+    String8 text = STRING8_FROM_LITERAL("Lorem ipsum dolor sit amet, consectetur adipiscing elit, sed do eiusmod tempor incididunt ut labore et dolore magna aliqua.");
+    
+    
+    
+    
 }
