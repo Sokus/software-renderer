@@ -31,4 +31,6 @@ typedef struct Rect
     F32 height;
 } Rect;
 
+#define RECT_EXPAND_CORNERS(rect) (rect).x0, (rect).y0, (rect).x1, (rect).y1
+
 #endif //SUMMONED_H

@@ -3,6 +3,12 @@
 #ifndef SUMMONED_MATH_H
 #define SUMMONED_MATH_H
 
+F32 Lerp(F32 a, F32 t, F32 b)
+{
+    F32 result = (1.0f - t)*a + t*b;
+    return result;
+}
+
 typedef union V2
 {
     struct

@@ -69,6 +69,8 @@ typedef double F64;
 #define CLAMP_TOP(a, b) MIN(a, b)
 #define CLAMP_BOT(a, b) MAX(a, b)
 
+#define PI32 3.14159265359f
+
 //~NOTE(sokus): Singly Linked Lists
 
 #define SLL_QUEUE_PUSH_BACK_EXPLICIT(f, l, n, next) ((f)==0?\
@@ -261,18 +263,43 @@ String8 String8Substr(String8 str, size_t first, size_t opl)
     return result;
 }
 
-typedef struct String8Node
+typedef enum StyleFlags
 {
-    struct String8Node *next;
-    String8 string;
+    STYLEFLAG_LINE_END = 1 << 0
+} StyleFlags;
+
+typedef struct String8Style
+{
+    StyleFlags flags;
     
     F32 r;
     F32 g;
     F32 b;
     F32 a;
     
-    int pos_x;
-    int pos_y;
+    F32 pos_x;
+    F32 pos_y;
+} String8Style;
+
+String8Style
+String8StyleDefault()
+{
+    String8Style result =
+    {
+        .r = 1.0f,
+        .g = 1.0f,
+        .b = 1.0f,
+        .a = 1.0f
+    };
+    
+    return result;
+}
+
+typedef struct String8Node
+{
+    struct String8Node *next;
+    String8 string;
+    String8Style style;
 } String8Node;
 
 typedef struct String8List
@@ -290,18 +317,19 @@ typedef struct String8Join
     String8 post;
 } String8Join;
 
-void String8ListPushExplicit(String8List *list, String8 string, String8Node *node_memory)
+void String8ListPushExplicit(String8List *list, String8Node *node_memory, String8 string, String8Style *style_optional)
 {
     node_memory->string = string;
+    node_memory->style = (style_optional != 0) ? *style_optional : String8StyleDefault();
     SLL_QUEUE_PUSH_BACK(list->first, list->last, node_memory);
     list->node_count += 1;
     list->total_size += string.size;
 }
 
-void String8ListPush(MemoryArena *arena, String8List *list, String8 string)
+void String8ListPush(MemoryArena *arena, String8List *list, String8 string, String8Style *style_optional)
 {
     String8Node *node = PUSH_STRUCT(arena, String8Node);
-    String8ListPushExplicit(list, string, node);
+    String8ListPushExplicit(list, node, string, style_optional);
 }
 
 String8 String8ListJoin(MemoryArena *arena, String8List *list, String8Join *join_optional)
@@ -382,7 +410,7 @@ String8List String8ListSplit(MemoryArena *arena, String8 string, U8 *split_chara
         {
             if(word_first < ptr)
             {
-                String8ListPush(arena, &result, String8FromRange(word_first, ptr));
+                String8ListPush(arena, &result, String8FromRange(word_first, ptr), 0);
             }
             
             word_first = ptr + 1;
@@ -391,7 +419,7 @@ String8List String8ListSplit(MemoryArena *arena, String8 string, U8 *split_chara
     
     if(word_first < ptr)
     {
-        String8ListPush(arena, &result, String8FromRange(word_first, ptr));
+        String8ListPush(arena, &result, String8FromRange(word_first, ptr), 0);
     }
     
     return result;
@@ -451,7 +479,7 @@ void String8ListPushFormat(MemoryArena *arena, String8List *list, char *format, 
     va_start(args, format);
     String8 string = String8PushFormatVariadic(arena, format, args);
     va_end(args);
-    String8ListPush(arena, list, string);
+    String8ListPush(arena, list, string, 0);
 }
 
 #endif //BASE_H

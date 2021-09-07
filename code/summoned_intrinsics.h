@@ -11,4 +11,16 @@ F32 RoundF32(F32 value)
     return result;
 }
 
+F32 Sin(F32 angle)
+{
+    F32 result = sinf(angle);
+    return result;
+}
+
+F32 Cos(F32 angle)
+{
+    F32 result = cosf(angle);
+    return result;
+}
+
 #endif //SUMMONED_INTRINSICS_H

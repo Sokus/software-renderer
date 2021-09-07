@@ -794,7 +794,7 @@ WinMain(HINSTANCE instance,
             
             
             if(!Win32MakeAsciiFont(font_pack.name, font_pack.size, &font_pack.regular,
-                                   0))
+                                   FONT_RASTER_FLAG_RASTER_FONT))
             {
                 INVALID_CODE_PATH;
             }
@@ -818,6 +818,7 @@ WinMain(HINSTANCE instance,
                 Win32GameCode game = Win32LoadGameCode(source_game_code_dll_path,
                                                        temp_game_code_dll_path,
                                                        game_code_lock_path);
+                
                 while(global_running)
                 {
                     FILETIME new_dll_write_time = Win32GetLastWriteTime(source_game_code_dll_path);
