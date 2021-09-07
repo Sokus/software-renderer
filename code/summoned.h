@@ -33,4 +33,9 @@ typedef struct Rect
 
 #define RECT_EXPAND_CORNERS(rect) (rect).x0, (rect).y0, (rect).x1, (rect).y1
 
+#define RECT_FILL_COLOR_DEFAULT 0.125f, 0.133f, 0.144f, 0.7f
+#define RECT_BORDER_COLOR_DEFAULT 0.203f, 0.211f, 0.222f, 0.7f
+
+#define RECT_BORDER_WIDTH_DEFAULT 4
+
 #endif //SUMMONED_H

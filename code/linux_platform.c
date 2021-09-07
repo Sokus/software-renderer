@@ -132,14 +132,14 @@ SDLUpdateWindow(SDLOffscreenBuffer *buffer, SDL_Renderer *renderer)
 }
 
 internal void
-SDLProcessKeyPress(GameButtonState *new_state, bool is_down)
+SDLProcessKeyPress(ButtonState *new_state, bool is_down)
 {
     new_state->ended_down = is_down;
     ++new_state->half_transition_count;
 }
 
 internal void
-SDLHandleEvent(SDL_Event *event, GameControllerInput *keyboard_controller)
+SDLHandleEvent(SDL_Event *event, ControllerInput *keyboard_controller)
 {
     switch(event->type)
     {
@@ -281,8 +281,8 @@ SDLOpenGameControllers(void)
 }
 
 internal void
-SDLProcessGameControllerButton(GameButtonState *old_state,
-                               GameButtonState *new_state,
+SDLProcessGameControllerButton(ButtonState *old_state,
+                               ButtonState *new_state,
                                bool ended_down)
 {
     new_state->ended_down = ended_down;
@@ -550,9 +550,9 @@ int main()
             SDLResizeTexture(&global_backbuffer, renderer, dimension.width, dimension.height);
             //SDLResizeTexture(&global_backbuffer, renderer, 960, 540);
             
-            GameInput input[2] = {0};
-            GameInput *new_input = &input[0];
-            GameInput *old_input = &input[1];
+            Input input[2] = {0};
+            Input *new_input = &input[0];
+            Input *old_input = &input[1];
             
 #if SUMMONED_DEBUG
             // TODO(sokus): This will fail on 32-bit
@@ -593,9 +593,9 @@ int main()
                 
                 new_input->dt_for_frame = target_seconds_per_frame;
                 
-                GameControllerInput *old_keyboard_controller = GetController(old_input, 0);
-                GameControllerInput *new_keyboard_controller = GetController(new_input, 0);
-                *new_keyboard_controller = (GameControllerInput){0};
+                ControllerInput *old_keyboard_controller = GetController(old_input, 0);
+                ControllerInput *new_keyboard_controller = GetController(new_input, 0);
+                *new_keyboard_controller = (ControllerInput){0};
                 
                 for(size_t button_index = 0;
                     ++button_index < ARRAY_COUNT(new_keyboard_controller->buttons);
@@ -618,8 +618,8 @@ int main()
                     if(global_controller_handles[controller_index] != 0 &&
                        SDL_GameControllerGetAttached(global_controller_handles[controller_index]))
                     {
-                        GameControllerInput *old_controller = GetController(old_input, controller_index+1);
-                        GameControllerInput *new_controller = GetController(new_input, controller_index+1);
+                        ControllerInput *old_controller = GetController(old_input, controller_index+1);
+                        ControllerInput *new_controller = GetController(new_input, controller_index+1);
                         
                         new_controller->is_connected = true;
                         
@@ -745,7 +745,7 @@ int main()
                 U64 end_cycle_count = _rdtsc();
                 U64 cycles_elapsed = end_cycle_count - last_cycle_count;
                 
-                GameInput *temp = new_input;
+                Input *temp = new_input;
                 new_input = old_input;
                 old_input = temp;
                 

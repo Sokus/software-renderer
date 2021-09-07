@@ -281,19 +281,7 @@ typedef struct String8Style
     F32 pos_y;
 } String8Style;
 
-String8Style
-String8StyleDefault()
-{
-    String8Style result =
-    {
-        .r = 1.0f,
-        .g = 1.0f,
-        .b = 1.0f,
-        .a = 1.0f
-    };
-    
-    return result;
-}
+#define STRING8STYLE_DEFAULT (String8Style){ .r=1, .g=1, .b=1, .a=.7f }
 
 typedef struct String8Node
 {
@@ -320,7 +308,7 @@ typedef struct String8Join
 void String8ListPushExplicit(String8List *list, String8Node *node_memory, String8 string, String8Style *style_optional)
 {
     node_memory->string = string;
-    node_memory->style = (style_optional != 0) ? *style_optional : String8StyleDefault();
+    node_memory->style = (style_optional != 0) ? *style_optional : STRING8STYLE_DEFAULT;
     SLL_QUEUE_PUSH_BACK(list->first, list->last, node_memory);
     list->node_count += 1;
     list->total_size += string.size;

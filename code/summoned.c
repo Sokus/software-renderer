@@ -7,7 +7,7 @@
 
 
 void
-DrawRectangle(VideoBuffer *buffer,
+DrawRectangle(OffscreenBuffer *buffer,
               F32 real_min_x, F32 real_min_y, F32 real_max_x, F32 real_max_y,
               F32 r, F32 g, F32 b, F32 a)
 {
@@ -64,7 +64,7 @@ typedef enum BorderStyle
 } BorderStyle;
 
 void
-DrawRectangleExplicit(VideoBuffer *buffer,
+DrawRectangleExplicit(OffscreenBuffer *buffer,
                       F32 min_x, F32 min_y, F32 max_x, F32 max_y,
                       F32 fill_r, F32 fill_g, F32 fill_b, F32 fill_a,
                       BorderStyle border_style, I32 border_width,
@@ -112,7 +112,7 @@ DrawRectangleExplicit(VideoBuffer *buffer,
 }
 
 void
-DebugDrawButtonState(VideoBuffer *buffer, GameButtonState state,
+DebugDrawButtonState(OffscreenBuffer *buffer, ButtonState state,
                      F32 pos_x, F32 pos_y, F32 tile_size)
 {
     F32 r = !!state.ended_down;
@@ -126,7 +126,7 @@ DebugDrawButtonState(VideoBuffer *buffer, GameButtonState state,
 }
 
 void
-DebugDrawAllControllerButtonStates(VideoBuffer *buffer, GameControllerInput *controller,
+DebugDrawAllControllerButtonStates(OffscreenBuffer *buffer, ControllerInput *controller,
                                    F32 pos_x, F32 pos_y, F32 tile_size)
 {
     V2 position = V2F32(pos_x, pos_y);
@@ -168,7 +168,7 @@ DebugDrawAllControllerButtonStates(VideoBuffer *buffer, GameControllerInput *con
 }
 
 void
-DrawAllControllerStates(VideoBuffer *buffer, GameInput *input)
+DrawAllControllerStates(OffscreenBuffer *buffer, Input *input)
 {
     F32 tile_size = 20;
     
@@ -190,7 +190,7 @@ DrawAllControllerStates(VideoBuffer *buffer, GameInput *input)
 }
 
 void
-DrawBitmap(VideoBuffer *buffer,
+DrawBitmap(OffscreenBuffer *buffer,
            U32 *bitmap_data, uint bitmap_w, uint bitmap_h,
            F32 part_x, F32 part_y, F32 part_w, F32 part_h,
            F32 pos_x, F32 pos_y,
@@ -263,7 +263,7 @@ DrawBitmap(VideoBuffer *buffer,
 }
 
 void
-DrawAsci(VideoBuffer *buffer, Font *font,
+DrawAsci(OffscreenBuffer *buffer, Font *font,
          U8 character,
          F32 pos_x, F32 pos_y,
          F32 r, F32 g, F32 b, F32 a)
@@ -279,7 +279,7 @@ DrawAsci(VideoBuffer *buffer, Font *font,
 }
 
 void
-DrawString(VideoBuffer *buffer, Font *font,
+DrawString(OffscreenBuffer *buffer, Font *font,
            char *source, size_t source_count,
            F32 pos_x, F32 pos_y,
            F32 r, F32 g, F32 b, F32 a)
@@ -351,7 +351,7 @@ SplitRect(Rect parent, Rect *rect0, Rect *rect1,
 }
 
 Rect
-RectFromVideoBuffer(VideoBuffer *buffer)
+RectFromOffscreenBuffer(OffscreenBuffer *buffer)
 {
     Rect result;
     
@@ -366,15 +366,15 @@ RectFromVideoBuffer(VideoBuffer *buffer)
     return result;
 }
 
-VideoBuffer
-VideoBufferPart(VideoBuffer *screen_buffer, int min_x, int min_y, int max_x, int max_y)
+OffscreenBuffer
+OffscreenBufferTrim(OffscreenBuffer *screen_buffer, int min_x, int min_y, int max_x, int max_y)
 {
     int min_x_clamped = CLAMP(0, min_x, screen_buffer->width);
     int min_y_clamped = CLAMP(0, min_y, screen_buffer->height);
     int max_x_clamped = CLAMP(min_x_clamped, max_x, screen_buffer->width);
     int max_y_clamped = CLAMP(min_y_clamped, max_y, screen_buffer->height);
     
-    VideoBuffer result = {0};
+    OffscreenBuffer result = {0};
     result.memory = (void *)((U8 *)screen_buffer->memory
                              + (min_y_clamped*screen_buffer->pitch)
                              + min_x_clamped*screen_buffer->bytes_per_pixel);
@@ -386,7 +386,7 @@ VideoBufferPart(VideoBuffer *screen_buffer, int min_x, int min_y, int max_x, int
     return result;
 }
 
-void String8ListPlaceInRect(String8List *list, Rect rect, int glyph_w, int glyph_h, F32 line_spacing_pct, bool bottom_up)
+void String8ListPlaceInRect(String8List *list, Rect rect, int glyph_w, int glyph_h, F32 line_jump, bool start_at_bottom)
 {
     F32 current_x = 0;
     F32 current_y = 0;
@@ -399,7 +399,7 @@ void String8ListPlaceInRect(String8List *list, Rect rect, int glyph_w, int glyph
            && current_x + (node->string.size * glyph_w) > rect.width)
         {
             current_x = 0;
-            current_y += line_spacing_pct;
+            current_y += line_jump;
         }
         
         node->style.pos_x = current_x;
@@ -408,7 +408,7 @@ void String8ListPlaceInRect(String8List *list, Rect rect, int glyph_w, int glyph
         if(node->style.flags & STYLEFLAG_LINE_END)
         {
             current_x = 0;
-            current_y += line_spacing_pct;
+            current_y += line_jump;
         }
         else
         {
@@ -416,7 +416,7 @@ void String8ListPlaceInRect(String8List *list, Rect rect, int glyph_w, int glyph
         }
     }
     
-    if(bottom_up)
+    if(start_at_bottom)
     {
         for(String8Node *node = list->first;
             node != 0;
@@ -428,7 +428,7 @@ void String8ListPlaceInRect(String8List *list, Rect rect, int glyph_w, int glyph
     }
 }
 
-void DrawStringList(VideoBuffer *buffer, Font *font, String8List *list)
+void DrawString8List(OffscreenBuffer *buffer, Font *font, String8List *list)
 {
     for(String8Node *node = list->first;
         node != 0;
@@ -453,7 +453,7 @@ void DrawStringList(VideoBuffer *buffer, Font *font, String8List *list)
     }
 }
 
-void GameUpdateAndRender(GameMemory *memory, GameInput *input, VideoBuffer *buffer, FontPack *font_pack)
+void GameUpdateAndRender(GameMemory *memory, Input *input, OffscreenBuffer *buffer, FontPack *font_pack)
 {
     ASSERT((&input->controllers[0].terminator - &input->controllers[0].buttons[0]) ==
            ARRAY_COUNT(input->controllers[0].buttons));
@@ -490,7 +490,7 @@ void GameUpdateAndRender(GameMemory *memory, GameInput *input, VideoBuffer *buff
     
     DrawRectangle(buffer, 0, 0, (F32)buffer->width, (F32)buffer->height, 0, 0, 0, 1);
     
-    Rect screen_rect = RectFromVideoBuffer(buffer);
+    Rect screen_rect = RectFromOffscreenBuffer(buffer);
     
     F32 lerp_argument = Sin(game_state->time/4)/2.0f + 0.5f;
     F32 split_argument = Lerp(0.05f, lerp_argument, 0.7f);
@@ -500,13 +500,13 @@ void GameUpdateAndRender(GameMemory *memory, GameInput *input, VideoBuffer *buff
     
     DrawRectangleExplicit(buffer,
                           left_panel.x0, left_panel.y0, left_panel.x1, left_panel.y1,
-                          0.3f, 0.3f, 0.3f, 0.7f,
-                          BORDERSTYLE_INNER, 4, 0.5f, 0.5f, 0.5f, 0.7f);
+                          RECT_FILL_COLOR_DEFAULT,
+                          BORDERSTYLE_INNER, RECT_BORDER_WIDTH_DEFAULT, RECT_BORDER_COLOR_DEFAULT);
     
     DrawRectangleExplicit(buffer,
                           right_panel.x0, right_panel.y0, right_panel.x1, right_panel.y1,
-                          0.3f, 0.3f, 0.3f, 0.7f,
-                          BORDERSTYLE_INNER, 4, 0.5f, 0.5f, 0.5f, 0.7f);
+                          RECT_FILL_COLOR_DEFAULT,
+                          BORDERSTYLE_INNER, RECT_BORDER_WIDTH_DEFAULT, RECT_BORDER_COLOR_DEFAULT);
     
     String8 text = STRING8_FROM_LITERAL("The raccoon, sometimes called the common raccoon to distinguish it from other species, is a medium-sized mammal native to North America. It is the largest of the procyonid family, having a body length of 40 to 70 cm (16 to 28 in), and a body weight of 5 to 26 kg (11 to 57 lb). Its grayish coat mostly consists of dense underfur, which insulates it against cold weather. Three of the raccoon's most distinctive features are its extremely dexterous front paws, its facial mask, and its ringed tail, which are themes in the mythologies of the indigenous peoples of the Americas relating to the animal. The raccoon is noted for its intelligence, as studies show that it is able to remember the solution to tasks for at least three years. It is usually nocturnal and omnivorous, eating about 40% invertebrates, 33% plants, and 27% vertebrates.");
     
@@ -514,8 +514,8 @@ void GameUpdateAndRender(GameMemory *memory, GameInput *input, VideoBuffer *buff
     
     Rect text_panel = RectRelativeExplicit(left_panel, 0, 0, 1, 1, 8, 8, 8, 8);
     String8ListPlaceInRect(&list, text_panel, font_pack->regular.glyph_w, font_pack->regular.glyph_h,
-                           font_pack->regular.glyph_h * 1.4, true);
+                           font_pack->regular.glyph_h * 1.1, false);
     
-    VideoBuffer left_panel_buffer = VideoBufferPart(buffer, RECT_EXPAND_CORNERS(text_panel));
-    DrawStringList(&left_panel_buffer, &font_pack->regular, &list);
+    OffscreenBuffer left_panel_buffer = OffscreenBufferTrim(buffer, RECT_EXPAND_CORNERS(text_panel));
+    DrawString8List(&left_panel_buffer, &font_pack->regular, &list);
 }

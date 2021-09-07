@@ -316,7 +316,7 @@ Win32LoadXInput(void)
 }
 
 internal void
-Win32ProcessKeyboardMessage(GameButtonState *state, bool is_down)
+Win32ProcessKeyboardMessage(ButtonState *state, bool is_down)
 {
     if(state->ended_down != is_down)
     {
@@ -327,8 +327,8 @@ Win32ProcessKeyboardMessage(GameButtonState *state, bool is_down)
 
 internal void
 Win32ProcessXInputDigitalButton(DWORD xinput_button_state, DWORD button_bit,
-                                GameButtonState *old_state,
-                                GameButtonState *new_state)
+                                ButtonState *old_state,
+                                ButtonState *new_state)
 {
     new_state->ended_down = ((xinput_button_state & button_bit) == button_bit);
     new_state->half_transition_count = (old_state->ended_down != new_state->ended_down) ? 1 : 0;
@@ -561,7 +561,7 @@ Win32ToggleFullscreen(HWND window)
 
 
 internal void
-Win32ProcessPendingMessages(GameControllerInput *keyboard_controller)
+Win32ProcessPendingMessages(ControllerInput *keyboard_controller)
 {
     MSG message;
     while(PeekMessage(&message, 0, 0, 0, PM_REMOVE))
@@ -811,9 +811,9 @@ WinMain(HINSTANCE instance,
                 LARGE_INTEGER flip_wall_clock = Win32GetWallClock();
                 // LARGE_INTEGER last_code_reload_check = Win32GetWallClock();
                 
-                GameInput input[2] = {0};
-                GameInput *new_input = &input[0];
-                GameInput *old_input = &input[1];
+                Input input[2] = {0};
+                Input *new_input = &input[0];
+                Input *old_input = &input[1];
                 
                 Win32GameCode game = Win32LoadGameCode(source_game_code_dll_path,
                                                        temp_game_code_dll_path,
@@ -835,9 +835,9 @@ WinMain(HINSTANCE instance,
                     // TODO(casey): Zeroing macro
                     // TODO(casey): We can't zero everything because the up/down state will
                     // be wrong!!!
-                    GameControllerInput *old_keyboard_controller = GetController(old_input, 0);
-                    GameControllerInput *new_keyboard_controller = GetController(new_input, 0);
-                    *new_keyboard_controller = (GameControllerInput){0};
+                    ControllerInput *old_keyboard_controller = GetController(old_input, 0);
+                    ControllerInput *new_keyboard_controller = GetController(new_input, 0);
+                    *new_keyboard_controller = (ControllerInput){0};
                     new_keyboard_controller->is_connected = true;
                     for(U64 button_index = 0;
                         button_index < ARRAY_COUNT(new_keyboard_controller->buttons);
@@ -888,8 +888,8 @@ WinMain(HINSTANCE instance,
                         ++controller_index)
                     {
                         DWORD our_controller_index = controller_index + 1;
-                        GameControllerInput *old_controller = GetController(old_input, our_controller_index);
-                        GameControllerInput *new_controller = GetController(new_input, our_controller_index);
+                        ControllerInput *old_controller = GetController(old_input, our_controller_index);
+                        ControllerInput *new_controller = GetController(new_input, our_controller_index);
                         
                         XINPUT_STATE controller_state;
                         if(global_xinput_get_state(controller_index, &controller_state) == ERROR_SUCCESS)
@@ -978,7 +978,7 @@ WinMain(HINSTANCE instance,
                     }
                     
                     
-                    VideoBuffer buffer = {0};
+                    OffscreenBuffer buffer = {0};
                     buffer.memory = global_backbuffer.memory;
                     buffer.width = global_backbuffer.width;
                     buffer.height = global_backbuffer.height;
@@ -1044,7 +1044,7 @@ WinMain(HINSTANCE instance,
                     
                     flip_wall_clock = Win32GetWallClock();
                     
-                    GameInput *swap_input = new_input;
+                    Input *swap_input = new_input;
                     new_input = old_input;
                     old_input = swap_input;
                 }
