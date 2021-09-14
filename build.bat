@@ -1,6 +1,6 @@
 @echo off
 
-set warnings=-Wall -Wextra -fdiagnostics-absolute-paths -Wno-unused-function
+set warnings=-Wall -Wextra -Wshadow -Wdouble-promotion -Wconversion -fdiagnostics-absolute-paths -Wno-unused-function
 set common_compiler_flags=-O0 -g -Wl,/incremental:no -D SUMMONED_DEBUG=1
 
 set libs=-luser32 -lgdi32 -lwinmm

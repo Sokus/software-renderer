@@ -68,9 +68,9 @@ Win32InitEXEPath(Win32State *state)
 }
 
 internal void
-Win32BuildEXEPathFilename(Win32State *state, char *filename, int dest_count, char *dest)
+Win32BuildEXEPathFilename(Win32State *state, char *filename, size_t dest_count, char *dest)
 {
-    size_t path_count = (state->one_past_last_exe_path_slash - state->exe_path);
+    size_t path_count = (size_t)(state->one_past_last_exe_path_slash - state->exe_path);
     ConcatenateStrings(state->exe_path, path_count,
                        filename, StringLength(filename),
                        dest, dest_count);
@@ -246,7 +246,8 @@ Win32MakeAsciiFont(char *font_name_utf8, int font_size, Font *out_font, FontRast
                     *(pixels+i) |= 0xFF000000;
                 }
 #endif
-                *(pixels+i) |= ((r+g+b)/3) << 24;
+                U32 alpha_mean = (U32)(r+g+b) / 3;
+                *(pixels+i) |= alpha_mean << 24;
                 
             }
             
@@ -382,7 +383,7 @@ Win32ResizeDIBSection(Win32OffscreenBuffer *buffer, int width, int height)
     // for clarifying the deal with StretchDIBits and BitBlt!
     // No more DC for us.
     int bitmap_memory_size = buffer->width * buffer->height * buffer->bytes_per_pixel;
-    buffer->memory = VirtualAlloc(0, bitmap_memory_size, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
+    buffer->memory = VirtualAlloc(0, (size_t)bitmap_memory_size, MEM_RESERVE|MEM_COMMIT, PAGE_READWRITE);
     buffer->pitch = buffer->width * buffer->bytes_per_pixel;
     
     

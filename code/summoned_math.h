@@ -9,6 +9,19 @@ F32 Lerp(F32 a, F32 t, F32 b)
     return result;
 }
 
+typedef union V4
+{
+    struct
+    {
+        F32 x, y, z, w;
+    };
+    struct
+    {
+        F32 r, g, b, a;
+    };
+    F32 e[4];
+} V4;
+
 typedef union V2
 {
     struct

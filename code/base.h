@@ -51,7 +51,9 @@ typedef double F64;
 # define ASSERT(expression)
 #endif
 
-#define INVALID_CODE_PATH ASSERT(!"Invalid Code Path")
+#define INVALID_CODE_PATH ASSERT("Invalid Code Path" == 0)
+
+#define OFFSET_OF(struct_type, member_name) ((size_t) &((struct_type *)0)->member_name)
 
 #define UNUSED(argument) (void)(argument)
 
@@ -69,7 +71,11 @@ typedef double F64;
 #define CLAMP_TOP(a, b) MIN(a, b)
 #define CLAMP_BOT(a, b) MAX(a, b)
 
+#define SWAP(a, b, type) STATEMENT(type swap=a; a=b; b=swap;)
+
 #define PI32 3.14159265359f
+
+#define SET_FLAG(bits, flag, value) STATEMENT(if(value) {(bits) |= (flag);} else {(bits) &= ~(flag);})
 
 //~NOTE(sokus): Singly Linked Lists
 
@@ -112,14 +118,21 @@ typedef double F64;
 
 #define DLL_PUSH_BACK(f, l, n) DLL_PUSH_BACK_EXPLICIT(f, l, n, next, prev)
 
-#define DLL_PUSH_FRONT(f, l, n) DLL_PUSH_BACK_EXPLICIT(l, f, n, prev, next)
+#define DLL_PUSH_FRONT_EXPLICIT(f, l, n, next, prev) DLL_PUSH_BACK_EXPLICIT(l, f, n, prev, next)
+#define DLL_PUSH_FRONT(f, l, n) DLL_PUSH_FRONT_EXPLICIT(f, l, n, next, prev)
 
+#if 0
 #define DLL_REMOVE_EXPLICIT(f, l, n, next, prev) ((f)==(n)?\
 ((f)=(f)->next,(f)->prev=0):\
 ((l)==(n)?\
 ((l)=(l)->prev, (l)->next=0):\
-((n)->next->prev=(n)->prev,\
-(n)->prev->next=(n)->next)))
+((n)->next->prev=(n)->prev,(n)->prev->next=(n)->next)))
+#else
+#define DLL_REMOVE_EXPLICIT(f, l, n, next, prev) ((f)==(n)?(f)=(f)->next:0,\
+(l)==(n)?(l)=(l)->prev:0,\
+(n->next)?(n)->next->prev=(n)->prev:0,\
+(n->prev)?(n)->prev->next=(n)->next:0)
+#endif
 
 #define DLL_REMOVE(f, l, n) DLL_REMOVE_EXPLICIT(f, l, n, next, prev);
 
@@ -183,10 +196,10 @@ ConcatenateStrings(char *str_a, size_t str_a_size,
     *(dest+str_a_size_clamped+str_b_size_clamped) = 0;
 }
 
-size_t
+uint
 StringLength(char *str)
 {
-    size_t result = 0;
+    uint result = 0;
     while(*str++)
     {
         ++result;
