@@ -71,10 +71,10 @@ DrawRectangleExplicit(OffscreenBuffer *buffer,
     // TODO(sokus): Figure out if those functions should even work on floats.
     if(width > 0.0f && height > 0.0f)
     {
-        F32 inside_border = (border_style == BORDERTYPE_CENTERED ? border_width/2 :
-                             border_style == BORDERTYPE_INNER ? border_width : 0);
-        F32 outside_border = (border_style == BORDERTYPE_CENTERED ? border_width/2 :
-                              border_style == BORDERTYPE_OUTER ? border_width : 0);
+        F32 inside_border = (border_style == BorderType_Centered ? border_width/2 :
+                             border_style == BorderType_Inner ? border_width : 0);
+        F32 outside_border = (border_style == BorderType_Centered ? border_width/2 :
+                              border_style == BorderType_Outer ? border_width : 0);
         
         if(fill_a > 0.0f
            && width - 2*inside_border > 0.0f
@@ -449,14 +449,14 @@ void UIInit(UIState *ui)
     {
         .fill_color = {{ 0.125f, 0.133f, 0.144f, 0.6f }},
         .border_color = {{ 0.203f, 0.211f, 0.222f, 0.6f }},
-        .border_type = BORDERTYPE_INNER,
+        .border_type = BorderType_Inner,
         .border_width = 4,
     };
     NodeStyle button_focused =
     {
         .fill_color = {{ 0.125f, 0.133f, 0.5f, 0.6f }},
         .border_color = {{ 0.203f, 0.211f, 0.6f, 0.6f }},
-        .border_type = BORDERTYPE_INNER,
+        .border_type = BorderType_Inner,
         .border_width = 4,
     };
     
@@ -464,7 +464,7 @@ void UIInit(UIState *ui)
     {
         .fill_color = {{ 0.125f, 0.5f, 0.144f, 0.6f }},
         .border_color = {{ 0.203f, 0.6f, 0.222f, 0.6f }},
-        .border_type = BORDERTYPE_INNER,
+        .border_type = BorderType_Inner,
         .border_width = 4,
     };
     
@@ -472,14 +472,14 @@ void UIInit(UIState *ui)
     {
         .fill_color = {{ 0.325f, 0.133f, 0.144f, 0.6f }},
         .border_color = {{ 0.503f, 0.211f, 0.222f, 0.6f }},
-        .border_type = BORDERTYPE_INNER,
+        .border_type = BorderType_Inner,
         .border_width = 4,
     };
     NodeStyle menu_focused =
     {
         .fill_color = {{ 0.325f, 0.133f, 0.5f, 0.6f }},
         .border_color = {{ 0.503f, 0.211f, 0.6f, 0.6f }},
-        .border_type = BORDERTYPE_INNER,
+        .border_type = BorderType_Inner,
         .border_width = 4,
     };
     
@@ -487,7 +487,7 @@ void UIInit(UIState *ui)
     {
         .fill_color = {{ 0.325f, 0.5f, 0.144f, 0.6f }},
         .border_color = {{ 0.503f, 0.6f, 0.222f, 0.6f }},
-        .border_type = BORDERTYPE_INNER,
+        .border_type = BorderType_Inner,
         .border_width = 4,
     };
     
@@ -543,6 +543,53 @@ void UIFrameStart(UIState *ui, uint frame_index)
     ui->frame_index = frame_index;
 }
 
+UINode *UINodeMenuGetNext(UINode *node)
+{
+    UINode *result = node->focused_child;
+    if(result == 0) result = node->child_first;
+    
+    UINode *next = 0;
+    if(result)
+    {
+        next = result->sibling_next;
+        while(next && next->flags & NodeFlag_Menu)
+        {
+            next = next->sibling_next;
+        }
+    }
+    
+    if(next)
+    {
+        result = next;
+    }
+    
+    return result;
+}
+
+
+UINode *UINodeMenuGetPrev(UINode *node)
+{
+    UINode *result = node->focused_child;
+    if(result == 0) result = node->child_first;
+    
+    UINode *prev = 0;
+    if(result)
+    {
+        prev = result->sibling_prev;
+        while(prev && prev->flags & NodeFlag_Menu)
+        {
+            prev = prev->sibling_prev;
+        }
+    }
+    
+    if(prev)
+    {
+        result = prev;
+    }
+    
+    return result;
+}
+
 void UINodeFindAndFreeOutdated(UIState *ui, UINode *root)
 {
     UINode *child = root->child_first;
@@ -553,6 +600,17 @@ void UINodeFindAndFreeOutdated(UIState *ui, UINode *root)
         next = child->sibling_next;
         if(child->frame_index != ui->frame_index)
         {
+            
+            if(root->focused_child == child)
+            {
+                UINode *new_focused_child = UINodeMenuGetNext(root);
+                if(new_focused_child == 0)
+                {
+                    new_focused_child = UINodeMenuGetPrev(root);
+                }
+                root->focused_child = new_focused_child;
+            }
+            
             DLL_REMOVE_EXPLICIT(root->child_first,
                                 root->child_last,
                                 child,
@@ -718,103 +776,112 @@ bool UIJustChangedOpen(UIState *ui)
 void UIUpdateNodeState(UIState *ui, UINode *node)
 {
     bool state_focused = node->parent->focused_child == node;
-    
-    //bool state_active = node->states & NodeState_Active;
     bool state_active = false;
-    bool is_open = UIIsOpen(ui, node);
     
     bool confirm_is_down = BUTTON_IS_DOWN(ui->input, action_down);
     bool confirm_was_down = BUTTON_WAS_DOWN(ui->input, action_down);
     
-    bool pressed = confirm_is_down && !confirm_was_down;
-    bool held = confirm_is_down && confirm_was_down;
-    bool released = !confirm_is_down && confirm_was_down;
+    bool confirm_pressed = confirm_is_down && !confirm_was_down;
+    bool confirm_held = confirm_is_down && confirm_was_down;
+    bool confirm_released = !confirm_is_down && confirm_was_down;
     
-    if(!UIJustChangedOpen(ui))
+    bool focus_pressed = false;
+    bool focus_held = false;
+    bool focus_released = false;
+    
+    bool is_open = UIIsOpen(ui, node);
+    
+    if(node->flags & NodeFlag_Menu)
     {
+        bool should_open = node->flags & NodeFlag_ShouldOpen;
         
-        if(node->flags & NodeFlag_Open)
+        if(!is_open)
         {
-            bool always_open = node->flags & NodeFlag_AlwaysOpen;
-            if(is_open)
+            node->focused_child = 0;
+            
+            if(should_open && UITopmostChild(ui, node))
             {
-                if(UITopmostOpen(ui, node))
-                {
-                    if(BUTTON_IS_DOWN(ui->input, action_right)
-                       && !BUTTON_WAS_DOWN(ui->input, action_right)
-                       && !always_open)
-                    {
-                        UIPopOpen(ui);
-                        is_open = false;
-                    }
-                    else if(BUTTON_IS_DOWN(ui->input, move_up)
-                            && !BUTTON_WAS_DOWN(ui->input, move_up))
-                    {
-                        if(node->focused_child_index > 0)
-                        {
-                            --node->focused_child_index;
-                        }
-                    }
-                    else if(BUTTON_IS_DOWN(ui->input, move_down)
-                            && !BUTTON_WAS_DOWN(ui->input, move_down))
-                    {
-                        ++node->focused_child_index;
-                    }
-                }
+                UIPushOpen(ui, node);
+                is_open = true;
             }
-            else
+        }
+        
+        if(is_open && node->focused_child == 0)
+        {
+            node->focused_child = node->child_first;
+        }
+        
+        if(is_open && UITopmostOpen(ui, node))
+        {
+            bool quit_pressed = (BUTTON_IS_DOWN(ui->input, action_right)
+                                 && !BUTTON_WAS_DOWN(ui->input, action_right));
+            bool next_pressed = (BUTTON_IS_DOWN(ui->input, move_down)
+                                 && !BUTTON_WAS_DOWN(ui->input, move_down));
+            bool prev_pressed = (BUTTON_IS_DOWN(ui->input, move_up)
+                                 && !BUTTON_WAS_DOWN(ui->input, move_up));
+            
+            if(quit_pressed && !should_open)
             {
-                if((state_focused || always_open) && UITopmostChild(ui, node))
-                {
-                    pressed = confirm_is_down && !confirm_was_down;
-                    if(pressed || always_open)
-                    {
-                        UIPushOpen(ui, node);
-                        is_open = true;
-                    }
-                }
+                UIPopOpen(ui);
+                is_open = false;
+            }
+            
+            if(next_pressed)
+            {
+                node->focused_child = UINodeMenuGetNext(node);
+            }
+            
+            if(prev_pressed)
+            {
+                node->focused_child = UINodeMenuGetPrev(node);
             }
             
             state_active = is_open;
-            
-            uint new_focused_child_index = 0;
-            UINode *child = node->child_first;
-            if(child != 0)
-            {
-                while(child->sibling_next != 0
-                      && new_focused_child_index < node->focused_child_index)
-                {
-                    ++new_focused_child_index;
-                    child = child->sibling_next;
-                }
-            }
-            node->focused_child = child;
-            node->focused_child_index = new_focused_child_index;
         }
-        else 
+    }
+    
+    if(node->flags & NodeFlag_Press)
+    {
+        if(state_focused && confirm_pressed
+           && !UIJustChangedOpen(ui) && UITopmostChild(ui, node))
         {
-            if(state_focused && UITopmostChild(ui, node))
-            {
-                if(node->flags & NodeFlag_Press)
-                {
-                    state_active = pressed;
-                }
-                
-                if(node->flags & NodeFlag_Toggle)
-                {
-                    bool old_state_active = node->states & NodeState_Active;
-                    state_active = old_state_active != pressed;
-                }
-            }
+            state_active = true;
+            focus_pressed = true;
         }
+    }
+    else if(node->flags & NodeFlag_Hold)
+    {
+        if(state_focused
+           && (confirm_pressed | confirm_held | confirm_released)
+           && !UIJustChangedOpen(ui) && UITopmostChild(ui, node))
+        {
+            state_active = confirm_held;
+            focus_pressed = confirm_pressed;
+            focus_held = confirm_held;
+            focus_released = confirm_released;
+        }
+    }
+    else if(node->flags & NodeFlag_Toggle)
+    {
+        bool old_active = node->states & NodeState_Active;
+        
+        if(state_focused && confirm_pressed
+           && !UIJustChangedOpen(ui) && UITopmostChild(ui, node))
+        {
+            state_active = !old_active;
+        }
+        
+        focus_pressed = !old_active && state_active;
+        focus_held = old_active && state_active;
+        focus_released = old_active && !state_active;
     }
     
     SET_FLAG(node->states, NodeState_Focused, state_focused);
     SET_FLAG(node->states, NodeState_Active, state_active);
     SET_FLAG(node->focus, NodeFocus_Focused, state_focused);
-    SET_FLAG(node->focus, NodeFocus_Pressed, pressed);
-    SET_FLAG(node->focus, NodeFocus_Held, held);
-    SET_FLAG(node->focus, NodeFocus_Released, released);
+    SET_FLAG(node->focus, NodeFocus_Pressed, focus_pressed);
+    SET_FLAG(node->focus, NodeFocus_Held, focus_held);
+    SET_FLAG(node->focus, NodeFocus_Released, focus_released);
     SET_FLAG(node->focus, NodeFocus_Open, is_open);
     
     node->state = (state_active ? NodeState_Active :
@@ -842,17 +909,12 @@ void UINodeEnd(UIState *ui)
     UISetPreviousSibling(ui, node);
 }
 
-NodeFocus UIBeginMenu(UIState *ui, int id, Rect rect)
+NodeFocus UIBeginMenu(UIState *ui, int id, bool open)
 {
-    UINodeStart(ui, id, rect, NodeFlag_Open, ui->styles.menu);
-    UINode *node = UIGetCurrentParent(ui);
-    NodeFocus result = node->focus;
-    return result;
-}
-
-NodeFocus UIBeginPermanentMenu(UIState *ui, int id, Rect rect)
-{
-    UINodeStart(ui, id, rect, NodeFlag_Open|NodeFlag_AlwaysOpen, 0);
+    NodeFlag flags = 0;
+    SET_FLAG(flags, NodeFlag_Menu, 1);
+    SET_FLAG(flags, NodeFlag_ShouldOpen, open);
+    UINodeStart(ui, id, (Rect){0}, flags, ui->styles.menu);
     UINode *node = UIGetCurrentParent(ui);
     NodeFocus result = node->focus;
     return result;
@@ -921,29 +983,29 @@ void GameUpdateAndRender(GameMemory *memory, Input *input, OffscreenBuffer *buff
     
     F32 pad = 5;
     
-    if(UIBeginPermanentMenu(ui, __LINE__, (Rect){0}) & NodeFocus_Open)
+    if(UIBeginMenu(ui, __LINE__, 1))
     {
         UIButton(ui, __LINE__, (Rect){0+pad, 300+pad, 200-pad, 400-pad});
         UIButton(ui, __LINE__, (Rect){0+pad, 200+pad, 200-pad, 300-pad});
-        
-        if(UIBeginMenu(ui, __LINE__, (Rect){0+pad, 100+pad, 200-pad, 200-pad}) & NodeFocus_Open)
+        NodeFocus button0 = UIButton(ui, __LINE__, (Rect){0+pad, 100+pad, 200-pad, 200-pad});
+        if(button0 & NodeFocus_Focused)
         {
+            UIBeginMenu(ui, __LINE__, button0 & NodeFocus_Pressed);
             UIButton(ui, __LINE__, (Rect){200+pad, 300+pad, 400-pad, 400-pad});
-            
-            if(UIBeginMenu(ui, __LINE__, (Rect){200+pad, 200+pad, 400-pad, 300-pad}) & NodeFocus_Open)
+            NodeFocus button1 = UIButton(ui, __LINE__, (Rect){200+pad, 200+pad, 400-pad, 300-pad});
+            if(button1 & NodeFocus_Focused)
             {
+                UIBeginMenu(ui, __LINE__, button1 & NodeFocus_Pressed);
                 UIButton(ui, __LINE__, (Rect){400+pad, 300+pad, 600-pad, 400-pad});
                 UIButton(ui, __LINE__, (Rect){400+pad, 200+pad, 600-pad, 300-pad});
                 UIButton(ui, __LINE__, (Rect){400+pad, 100+pad, 600-pad, 200-pad});
                 UIButton(ui, __LINE__, (Rect){400+pad, 0+pad, 600-pad, 100-pad});
+                UIEndMenu(ui);
             }
-            UIEndMenu(ui);
-            
             UIButton(ui, __LINE__, (Rect){200+pad, 100+pad, 400-pad, 200-pad});
             UIButton(ui, __LINE__, (Rect){200+pad, 0+pad, 400-pad, 100-pad});
+            UIEndMenu(ui);
         }
-        UIEndMenu(ui);
-        
         UIButton(ui, __LINE__, (Rect){0+pad, 0+pad, 200-pad, 100-pad});
     }
     UIEndMenu(ui);

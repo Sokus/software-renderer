@@ -14,10 +14,11 @@ typedef struct Rect
 typedef enum NodeFlag
 {
     NodeFlag_None = 0x0,
-    NodeFlag_Press = 0x1, 
+    NodeFlag_Press = 0x1,
+    NodeFlag_Hold = 0x2,
     NodeFlag_Toggle = 0x4,
-    NodeFlag_Open = 0x8,
-    NodeFlag_AlwaysOpen = 0x10
+    NodeFlag_Menu = 0x8,
+    NodeFlag_ShouldOpen = 0x10
 } NodeFlag;
 
 typedef enum NodeFocus
@@ -40,11 +41,11 @@ typedef enum NodeState
 
 typedef enum BorderType
 {
-    BORDERTYPE_NONE = 0,
-    BORDERTYPE_CENTERED = 1,
-    BORDERTYPE_INNER = 2,
-    BORDERSTYLE_DEFAULT = 2,
-    BORDERTYPE_OUTER = 3,
+    BorderType_None = 0,
+    BorderType_Centered = 1,
+    BorderType_Inner = 2,
+    BorderType_Default = 2,
+    BorderType_Outer = 3,
 } BorderType;
 
 typedef V4 Color;

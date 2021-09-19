@@ -410,9 +410,9 @@ SDLMakeAsciiFont(char *font_name_utf8, int font_size, Font *out_font, FontRaster
 {
     bool result = false;
     
-    // bool raster_font = !!(flags & FONT_RASTER_FLAG_RASTER_FONT);
-    bool dont_map_unicode = !!(flags & FONT_RASTER_FLAG_DONT_MAP_UNICODE);
-    bool bold = !!(flags & FONT_RASTER_FLAG_BOLD);
+    // bool raster_font = !!(flags & FontRasterFlag_RasterFont);
+    bool dont_map_unicode = !!(flags & FontRasterFlag_DontMapUnicode);
+    bool bold = !!(flags & FontRasterFlag_Bold);
     
     *out_font = (Font){0};
     
@@ -512,7 +512,7 @@ int main()
         INVALID_CODE_PATH;
     }
     
-    if(!SDLMakeAsciiFont(font_pack.filename, font_pack.size, &font_pack.bold, FONT_RASTER_FLAG_BOLD))
+    if(!SDLMakeAsciiFont(font_pack.filename, font_pack.size, &font_pack.bold, FontRasterFlag_Bold))
     {
         INVALID_CODE_PATH;
     }

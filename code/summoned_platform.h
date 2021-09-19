@@ -86,9 +86,9 @@ GetController(Input *input, uint controller_index)
 
 typedef enum FontRasterFlags
 {
-    FONT_RASTER_FLAG_RASTER_FONT = 1,
-    FONT_RASTER_FLAG_DONT_MAP_UNICODE = 2,
-    FONT_RASTER_FLAG_BOLD = 4
+    FontRasterFlag_RasterFont = 1,
+    FontRasterFlag_DontMapUnicode = 2,
+    FontRasterFlag_Bold = 4
 } FontRasterFlags;
 
 typedef struct Font
