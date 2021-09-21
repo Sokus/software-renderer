@@ -543,7 +543,7 @@ void UIFrameStart(UIState *ui, uint frame_index)
     ui->frame_index = frame_index;
 }
 
-UINode *UINodeMenuGetNext(UINode *node)
+UINode *UIGetNextMenuItem(UINode *node)
 {
     UINode *result = node->focused_child;
     if(result == 0) result = node->child_first;
@@ -567,7 +567,7 @@ UINode *UINodeMenuGetNext(UINode *node)
 }
 
 
-UINode *UINodeMenuGetPrev(UINode *node)
+UINode *UIGetPreviousMenuItem(UINode *node)
 {
     UINode *result = node->focused_child;
     if(result == 0) result = node->child_first;
@@ -590,9 +590,9 @@ UINode *UINodeMenuGetPrev(UINode *node)
     return result;
 }
 
-void UINodeFindAndFreeOutdated(UIState *ui, UINode *root)
+void UIFreeOutdatedInTree(UIState *ui, UINode *node)
 {
-    UINode *child = root->child_first;
+    UINode *child = node->child_first;
     UINode *next;
     
     while(child != 0)
@@ -601,18 +601,18 @@ void UINodeFindAndFreeOutdated(UIState *ui, UINode *root)
         if(child->frame_index != ui->frame_index)
         {
             
-            if(root->focused_child == child)
+            if(node->focused_child == child)
             {
-                UINode *new_focused_child = UINodeMenuGetNext(root);
+                UINode *new_focused_child = UIGetNextMenuItem(node);
                 if(new_focused_child == 0)
                 {
-                    new_focused_child = UINodeMenuGetPrev(root);
+                    new_focused_child = UIGetPreviousMenuItem(node);
                 }
-                root->focused_child = new_focused_child;
+                node->focused_child = new_focused_child;
             }
             
-            DLL_REMOVE_EXPLICIT(root->child_first,
-                                root->child_last,
+            DLL_REMOVE_EXPLICIT(node->child_first,
+                                node->child_last,
                                 child,
                                 sibling_next,
                                 sibling_prev);
@@ -620,7 +620,7 @@ void UINodeFindAndFreeOutdated(UIState *ui, UINode *root)
         }
         else
         {
-            UINodeFindAndFreeOutdated(ui, child);
+            UIFreeOutdatedInTree(ui, child);
         }
         child = next;
     }
@@ -649,7 +649,7 @@ UIFrameEnd(UIState *ui)
     }
     ui->stack_used -= stack_freed;
     
-    UINodeFindAndFreeOutdated(ui, ui->root);
+    UIFreeOutdatedInTree(ui, ui->root);
 }
 
 UINode *UIGetOrInsertNodeInTree(UIState *ui, int id)
@@ -726,6 +726,17 @@ void UIPopOpen(UIState *ui)
     }
 }
 
+bool UIJustChangedOpen(UIState *ui)
+{
+    bool result = false;
+    if(ui->stack_used > 0)
+    {
+        UIOpened last_opened = ui->opened_stack[ui->stack_used-1];
+        result = (last_opened.frame_opened == ui->frame_index);
+    }
+    return result;
+}
+
 bool UIIsOpen(UIState *ui, UINode *node)
 {
     bool result = false;
@@ -759,17 +770,6 @@ bool UITopmostChild(UIState *ui, UINode *child)
 {
     bool result = (ui->stack_used == 0
                    || UITopmostOpen(ui, child->parent));
-    return result;
-}
-
-bool UIJustChangedOpen(UIState *ui)
-{
-    bool result = false;
-    if(ui->stack_used > 0)
-    {
-        UIOpened last_opened = ui->opened_stack[ui->stack_used-1];
-        result = (last_opened.frame_opened == ui->frame_index);
-    }
     return result;
 }
 
@@ -828,12 +828,12 @@ void UIUpdateNodeState(UIState *ui, UINode *node)
             
             if(next_pressed)
             {
-                node->focused_child = UINodeMenuGetNext(node);
+                node->focused_child = UIGetNextMenuItem(node);
             }
             
             if(prev_pressed)
             {
-                node->focused_child = UINodeMenuGetPrev(node);
+                node->focused_child = UIGetPreviousMenuItem(node);
             }
             
             state_active = is_open;
@@ -929,6 +929,8 @@ NodeFocus UIButton(UIState *ui, int id, Rect rect)
 {
     UINodeStart(ui, id, rect, NodeFlag_Press, ui->styles.button);
     UINode *node = UIGetCurrentParent(ui);
+    
+    
     NodeFocus result = node->focus;
     UINodeEnd(ui);
     return result;
@@ -988,24 +990,22 @@ void GameUpdateAndRender(GameMemory *memory, Input *input, OffscreenBuffer *buff
         UIButton(ui, __LINE__, (Rect){0+pad, 300+pad, 200-pad, 400-pad});
         UIButton(ui, __LINE__, (Rect){0+pad, 200+pad, 200-pad, 300-pad});
         NodeFocus button0 = UIButton(ui, __LINE__, (Rect){0+pad, 100+pad, 200-pad, 200-pad});
-        if(button0 & NodeFocus_Focused)
+        if(UIBeginMenu(ui, __LINE__, button0 & NodeFocus_Pressed) & NodeFocus_Open)
         {
-            UIBeginMenu(ui, __LINE__, button0 & NodeFocus_Pressed);
             UIButton(ui, __LINE__, (Rect){200+pad, 300+pad, 400-pad, 400-pad});
             NodeFocus button1 = UIButton(ui, __LINE__, (Rect){200+pad, 200+pad, 400-pad, 300-pad});
-            if(button1 & NodeFocus_Focused)
+            if(UIBeginMenu(ui, __LINE__, button1 & NodeFocus_Pressed) & NodeFocus_Open)
             {
-                UIBeginMenu(ui, __LINE__, button1 & NodeFocus_Pressed);
                 UIButton(ui, __LINE__, (Rect){400+pad, 300+pad, 600-pad, 400-pad});
                 UIButton(ui, __LINE__, (Rect){400+pad, 200+pad, 600-pad, 300-pad});
                 UIButton(ui, __LINE__, (Rect){400+pad, 100+pad, 600-pad, 200-pad});
                 UIButton(ui, __LINE__, (Rect){400+pad, 0+pad, 600-pad, 100-pad});
-                UIEndMenu(ui);
             }
+            UIEndMenu(ui);
             UIButton(ui, __LINE__, (Rect){200+pad, 100+pad, 400-pad, 200-pad});
             UIButton(ui, __LINE__, (Rect){200+pad, 0+pad, 400-pad, 100-pad});
-            UIEndMenu(ui);
         }
+        UIEndMenu(ui);
         UIButton(ui, __LINE__, (Rect){0+pad, 0+pad, 200-pad, 100-pad});
     }
     UIEndMenu(ui);
