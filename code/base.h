@@ -136,6 +136,11 @@ typedef double F64;
 
 #define DLL_REMOVE(f, l, n) DLL_REMOVE_EXPLICIT(f, l, n, next, prev);
 
+//~
+
+#define MEMORY_COPY(destination, source, size) memcpy(destination, source, size)
+#define MEMORY_SET(destination, value, size) memset(destination, value, size)
+
 
 //~NOTE(sokus): memory arenas
 
@@ -190,8 +195,8 @@ ConcatenateStrings(char *str_a, size_t str_a_size,
     size_t size_remaining = dest_size_clamped - str_a_size_clamped;
     size_t str_b_size_clamped = CLAMP(0, str_b_size, size_remaining);
     
-    memcpy(dest, str_a, str_a_size_clamped);
-    memcpy(dest+str_a_size_clamped, str_b, str_b_size_clamped);
+    MEMORY_COPY(dest, str_a, str_a_size_clamped);
+    MEMORY_COPY(dest+str_a_size_clamped, str_b, str_b_size_clamped);
     
     *(dest+str_a_size_clamped+str_b_size_clamped) = 0;
 }
@@ -352,7 +357,7 @@ String8 String8ListJoin(MemoryArena *arena, String8List *list, String8Join *join
     
     U8 *ptr = str;
     
-    memcpy(ptr, join->pre.str, join->pre.size);
+    MEMORY_COPY(ptr, join->pre.str, join->pre.size);
     ptr += join->pre.size;
     
     bool is_mid = false;
@@ -362,11 +367,11 @@ String8 String8ListJoin(MemoryArena *arena, String8List *list, String8Join *join
     {
         if(is_mid)
         {
-            memcpy(ptr, join->mid.str, join->mid.size);
+            MEMORY_COPY(ptr, join->mid.str, join->mid.size);
             ptr += join->mid.size;
         }
         
-        memcpy(ptr, node->string.str, node->string.size);
+        MEMORY_COPY(ptr, node->string.str, node->string.size);
         ptr += node->string.size;
         
         if(node->next != 0)
@@ -377,7 +382,7 @@ String8 String8ListJoin(MemoryArena *arena, String8List *list, String8Join *join
         {
             is_mid = false;
             
-            memcpy(ptr, join->post.str, join->post.size);
+            MEMORY_COPY(ptr, join->post.str, join->post.size);
             ptr += join->post.size;
         }
     }

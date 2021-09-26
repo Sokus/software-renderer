@@ -24,65 +24,40 @@ typedef struct GameMemory
     void *transient_storage; // NOTE(casey): REQUIRED to be cleared to zero at startup
 } GameMemory;
 
-typedef struct ButtonState
+typedef enum InputKey
 {
-    int half_transition_count;
-    bool ended_down;
-} ButtonState;
-
-typedef struct ControllerInput
-{
-    bool is_connected;
-    bool is_analog;
-    F32 stick_average_x;
-    F32 stick_average_y;
-    
-    union
-    {
-        ButtonState buttons[12];
-        struct
-        {
-            ButtonState move_up;
-            ButtonState move_down;
-            ButtonState move_left;
-            ButtonState move_right;
-            
-            ButtonState action_up;
-            ButtonState action_down;
-            ButtonState action_left;
-            ButtonState action_right;
-            
-            ButtonState left_bumper;
-            ButtonState right_bumper;
-            
-            ButtonState select;
-            ButtonState start;
-            
-            // NOTE(casey): All buttons must be added above this line
-            
-            ButtonState terminator;
-        };
-    };
-} ControllerInput;
+    Input_DPadUp,      // W
+    Input_DPadLeft,    // A
+    Input_DPadDown,    // S
+    Input_DPadRight,   // D
+    Input_ActionUp,    // R
+    Input_ActionLeft,  // F
+    Input_ActionDown,  // E      // Confirm
+    Input_ActionRight, // Q      // Cancel
+    Input_BumperLeft,  // Ctrl
+    Input_BumperRight, // Shift
+    Input_Select,      // Tab
+    Input_Start,       // Escape
+    Input_MouseLeft,
+    Input_MouseRight,
+    Input_MouseMiddle,
+    Input_MouseM4,
+    Input_MouseM5,
+    Input_COUNT
+} InputKey;
 
 typedef struct Input
 {
-    ControllerInput controllers[5];
-    ButtonState mouse_buttons[5];
+    bool keys_down[Input_COUNT];
+    F32 keys_down_duration[Input_COUNT];
+    F32 keys_down_duration_previous[Input_COUNT];
+    
+    F32 stick_x, stick_y;
     I32 mouse_x, mouse_y, mouse_z;
     
-    F32 dt_for_frame;
+    uint frame_index;
+    F32 time_dt;
 } Input;
-
-ControllerInput *
-GetController(Input *input, uint controller_index)
-{
-    U32 count = ARRAY_COUNT(input->controllers);
-    ASSERT(controller_index < count);
-    
-    ControllerInput *result = &input->controllers[controller_index];
-    return result;
-}
 
 typedef enum FontRasterFlags
 {
