@@ -514,13 +514,12 @@ bool WasOpen(UIState *ui, uint id)
     return result;
 }
 
-bool WasTopmostOpen(UIState *ui, uint id)
+uint WasTopmostOpen(UIState *ui)
 {
-    bool result = false;
+    uint result = 0;
     if(ui->was_open_stack_size > 0)
     {
-        if(ui->was_open_stack[ui->was_open_stack_size - 1] == id)
-            result = true;
+        result = ui->was_open_stack[ui->was_open_stack_size - 1];
     }
     return result;
 }
@@ -543,85 +542,52 @@ void NavLogic(UIState *ui, uint id, Rect rect)
     ASSERT(current_window != 0);
     
     // NOTE(sokus): Nav logic
+    bool set_nav_id_and_rect = false;
     if(current_window->last_nav_id == 0)
     {
-        if(current_window->nav_new_best_id == 0)
-        {
-            // set next nav_id if we are not focused on anything
-            // and no next nav_id was set yet
-            current_window->nav_new_best_id = id;
-            current_window->nav_new_best_rect = rect;
-            current_window->nav_min_distance = 0;
-        }
+        if(current_window->new_nav_id == 0)
+            set_nav_id_and_rect = true;
     }
     else
     {
         if(current_window->last_nav_id == id)
         {
-            // keep the nav_id alive
-            current_window->nav_id = id;
-            current_window->nav_rect = rect;
+            set_nav_id_and_rect = true;
         }
         else
         {
-            if(WasTopmostOpen(ui, current_window->id))
+            if(ui->was_topmost_open_id == current_window->id)
             {
-                if(ui->nav_dir != UINavDir_None)
+                Rect *nav_clip_rects = current_window->nav_clip_rects;
+                for(uint direction_idx = 0;
+                    direction_idx < ARRAY_COUNT(current_window->nav_clip_rects);
+                    ++direction_idx)
                 {
-                    Rect nav_clip_rect = current_window->nav_rect;
-                    nav_clip_rect.x0 = CLAMP_BOT(nav_clip_rect.x0, 0);
-                    nav_clip_rect.x1 = CLAMP_TOP(nav_clip_rect.x1, (F32)ui->offscreen_buffer->width);
-                    nav_clip_rect.y0 = CLAMP_BOT(nav_clip_rect.y0, 0);
-                    nav_clip_rect.y1 = CLAMP_TOP(nav_clip_rect.y1, (F32)ui->offscreen_buffer->height);
-                    
-                    V2 nav_rect_pos = RectCenter(current_window->nav_rect);
-                    V2 element_rect_pos = RectCenter(rect);
-                    
-                    uint axis_idx = 0;
-                    switch(ui->nav_dir)
+                    if(RectanglesOverlap(rect, nav_clip_rects[direction_idx]))
                     {
-                        case UINavDir_Up:
-                        {
-                            nav_clip_rect.y1 = (F32)ui->offscreen_buffer->height;
-                            axis_idx = 1; 
-                        } break;
+                        V2 nav_rect_pos = RectCenter(current_window->last_nav_rect);
+                        V2 element_rect_pos = RectCenter(rect);
+                        V2 offset = SubtractV2(nav_rect_pos, element_rect_pos);
+                        F32 distance = V2LengthSquared(offset);
                         
-                        case UINavDir_Left:
+                        NavCandidate *current_nav_candidate = ui->nav_candidates + direction_idx;
+                        if(current_nav_candidate->id == 0
+                           || distance <= current_nav_candidate->distance)
                         {
-                            nav_clip_rect.x0 = 0;
-                            axis_idx = 0;
-                        } break;
-                        
-                        case UINavDir_Down:
-                        {
-                            nav_clip_rect.y0 = 0;
-                            axis_idx = 1;
-                        } break;
-                        
-                        case UINavDir_Right:
-                        {
-                            nav_clip_rect.x1 = (F32)ui->offscreen_buffer->height;
-                            axis_idx = 0;
-                        } break;
-                        
-                        default: break;
-                    }
-                    
-                    if(RectanglesOverlap(rect, nav_clip_rect))
-                    {
-                        F32 distance = ABS(element_rect_pos.e[axis_idx] - nav_rect_pos.e[axis_idx]);
-                        
-                        if(current_window->nav_new_best_id == 0
-                           || distance <= current_window->nav_min_distance)
-                        {
-                            current_window->nav_new_best_id = id;
-                            current_window->nav_new_best_rect = rect;
-                            current_window->nav_min_distance = distance;
+                            current_nav_candidate->id = id;
+                            current_nav_candidate->rect = rect;
+                            current_nav_candidate->distance = distance;
                         }
                     }
                 }
             }
         }
+    }
+    
+    if(set_nav_id_and_rect)
+    {
+        current_window->new_nav_id = id;
+        current_window->new_nav_rect = rect;
     }
     
 }
@@ -636,7 +602,7 @@ bool BeginMenu(UIState *ui, char *name, Rect rect)
     
     bool focused = current_window->last_nav_id == id;
     bool pressed = (focused
-                    && WasTopmostOpen(ui, current_window->id)
+                    && current_window->id == ui->was_topmost_open_id
                     && Pressed(ui->input, Input_ActionDown));
     
     bool is_open = (WasOpen(ui, id) || pressed);
@@ -673,7 +639,7 @@ bool Button(UIState *ui, char *name, Rect rect)
     
     bool focused = current_window->last_nav_id == id;
     bool pressed = (focused
-                    && WasTopmostOpen(ui, current_window->id)
+                    && current_window->id == ui->was_topmost_open_id
                     && Pressed(ui->input, Input_ActionDown));
     
     UIColor fill_color_idx = (pressed  ? UIColor_FillActive :
@@ -701,6 +667,22 @@ void EndMenu(UIState *ui)
 
 void BeginFrame(UIState *ui)
 {
+    UINavDir nav_dir = (KeyRepeat(ui, Input_DPadUp)    ? UINavDir_Up    :
+                        KeyRepeat(ui, Input_DPadDown)  ? UINavDir_Down  :
+                        KeyRepeat(ui, Input_DPadLeft)  ? UINavDir_Left  :
+                        KeyRepeat(ui, Input_DPadRight) ? UINavDir_Right : UINavDir_None);
+    if(nav_dir)
+    {
+        UIWindow *window = GetWindow(ui, ui->was_topmost_open_id);
+        NavCandidate *nav_candidate = ui->nav_candidates + (nav_dir - 1);
+        
+        if(nav_candidate->id != 0)
+        {
+            window->new_nav_id = nav_candidate->id;
+            window->new_nav_rect = nav_candidate->rect;
+        }
+    }
+    
     ui->current_window = 0;
     MEMORY_COPY(ui->was_open_stack, ui->open_stack, sizeof(uint)*ui->open_stack_size);
     ui->was_open_stack_size = ui->open_stack_size;
@@ -711,35 +693,72 @@ void BeginFrame(UIState *ui)
     {
         window->was_active = window->active;
         window->active = false;
-        window->last_nav_id = window->nav_id;
-        window->nav_id = 0;
-        window->nav_new_best_id = 0;
+        window->last_nav_id = window->new_nav_id;
+        window->new_nav_id = 0;
+        window->last_nav_rect = window->new_nav_rect;
         ++window;
     }
     
-    ui->nav_dir = (KeyRepeat(ui, Input_DPadUp)    ? UINavDir_Up    :
-                   KeyRepeat(ui, Input_DPadDown)  ? UINavDir_Down  :
-                   KeyRepeat(ui, Input_DPadLeft)  ? UINavDir_Left  :
-                   KeyRepeat(ui, Input_DPadRight) ? UINavDir_Right : UINavDir_None);
+    ui->was_topmost_open_id = WasTopmostOpen(ui);
+    
+    NavCandidate *nav_candidate = ui->nav_candidates;
+    for(uint idx = 0; idx < ARRAY_COUNT(ui->nav_candidates); ++idx)
+    {
+        nav_candidate->id = 0;
+    }
     
     uint window_id = GetID(ui, "root_window");
     BeginWindow(ui, window_id);
     PushOpen(ui, window_id);
+    
 }
 
 void EndFrame(UIState *ui)
 {
     ASSERT(ui->open_stack_size == 1);
     
-    UIWindow *window = ui->current_window;
-    for(uint idx = 0; idx < ARRAY_COUNT(ui->windows); ++idx)
+    if(ui->was_open_stack_size > 0)
     {
-        if(window->active && window->nav_new_best_id != 0)
+        
+        UIWindow *window = GetWindow(ui, ui->was_topmost_open_id);
+        
+        F32 buffer_w = (F32)ui->offscreen_buffer->width;
+        F32 buffer_h = (F32)ui->offscreen_buffer->height;
+        
+        Rect *nav_clip_rects = window->nav_clip_rects;
+        Rect last_nav_rect = window->last_nav_rect;
+        for(uint idx = 0; idx < ARRAY_COUNT(window->nav_clip_rects); ++idx)
         {
-            window->nav_id = window->nav_new_best_id;
-            window->nav_rect = window->nav_new_best_rect;
+            nav_clip_rects[idx].x0 = CLAMP(0, last_nav_rect.x0, buffer_w);
+            nav_clip_rects[idx].y0 = CLAMP(0, last_nav_rect.y0, buffer_h);
+            nav_clip_rects[idx].x1 = CLAMP(0, last_nav_rect.x1, buffer_w);
+            nav_clip_rects[idx].y1 = CLAMP(0, last_nav_rect.y1, buffer_h);
         }
-        ++window;
+        
+        nav_clip_rects[UINavDir_Up - 1].y0 = nav_clip_rects[UINavDir_Up - 1].y1;
+        nav_clip_rects[UINavDir_Up - 1].y1 = buffer_h - 1.0f;
+        
+        nav_clip_rects[UINavDir_Left - 1].x1 = nav_clip_rects[UINavDir_Left - 1].x0;
+        nav_clip_rects[UINavDir_Left - 1].x0 = 0;
+        
+        nav_clip_rects[UINavDir_Down - 1].y1 = nav_clip_rects[UINavDir_Down - 1].y0;
+        nav_clip_rects[UINavDir_Down - 1].y0 = 0.0f;
+        
+        nav_clip_rects[UINavDir_Right - 1].x0 = nav_clip_rects[UINavDir_Right - 1].x1;
+        nav_clip_rects[UINavDir_Right - 1].x1 = buffer_w;
+        
+        for(uint idx = 0; idx < ARRAY_COUNT(window->nav_clip_rects); ++idx)
+        {
+            DrawRectangleEx(ui->offscreen_buffer,
+                            nav_clip_rects[idx].x0,
+                            nav_clip_rects[idx].y0,
+                            nav_clip_rects[idx].x1,
+                            nav_clip_rects[idx].y1,
+                            0, 0, 0, 0,
+                            UIBorder_Inner, 1,
+                            0.5f, 0.5f, 1.0f, 0.5f);
+        }
+        
     }
     
     if(Pressed(ui->input, Input_ActionRight) && ui->open_stack_size > 1)
@@ -816,7 +835,8 @@ void GameUpdateAndRender(GameMemory *memory, Input *input, OffscreenBuffer *buff
         F32 r = !was_down && is_down;
         F32 g = is_down;
         F32 b = was_down;
-        DrawRectangle(buffer, (F32)idx*20, 0, (F32)(idx+1)*20, 20, r, g, b, 1);
+        F32 a = ((r != 0 || g != 0 || b != 0) ? 1.0f : 0.0f);
+        DrawRectangle(buffer, (F32)idx*20, 0, (F32)(idx+1)*20, 20, r, g, b, a);
     }
     
     ++game_state->frame_idx;

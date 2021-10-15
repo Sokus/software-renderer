@@ -104,4 +104,10 @@ SubtractV2(V2 a, V2 b)
     return result;
 }
 
+F32 V2LengthSquared(V2 a)
+{
+    F32 result = a.x*a.x + a.y*a.y;
+    return result;
+}
+
 #endif //SUMMONED_MATH_H

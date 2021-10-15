@@ -693,9 +693,9 @@ WinMain(HINSTANCE instance,
             {
                 monitor_refresh_hz = win32_refresh_rate;
             }
+            
             F32 game_update_hz = ((F32)monitor_refresh_hz / 2.0f);
             F32 target_seconds_per_frame = 1.0f / (F32)game_update_hz;
-            
             
             global_running = true;
 #if SUMMONED_DEBUG
@@ -857,6 +857,7 @@ WinMain(HINSTANCE instance,
                     F32 platform_work_seconds_elapsed = Win32GetSecondsElapsed(last_counter, game_work_start);
                     F32 game_work_seconds_elapsed = Win32GetSecondsElapsed(game_work_start, work_counter);
                     
+                    
                     // TODO(casey): NOT TESTED YET! PROBABLY BUGGY!!!!!
                     F32 seconds_elapsed_for_frame = platform_work_seconds_elapsed + game_work_seconds_elapsed;
                     if(seconds_elapsed_for_frame < target_seconds_per_frame)
@@ -893,6 +894,7 @@ WinMain(HINSTANCE instance,
                         // TODO(casey): Logging
                     }
                     
+                    
                     LARGE_INTEGER end_counter = Win32GetWallClock();
                     // F32 ms_per_frame = 1000.0f*Win32GetSecondsElapsed(last_counter, end_counter);
                     last_counter = end_counter;
@@ -903,6 +905,7 @@ WinMain(HINSTANCE instance,
                                                dimension.width, dimension.height);
                     ReleaseDC(window, device_context);
                     
+                    ++input.frame_index;
                     flip_wall_clock = Win32GetWallClock();
                 }
             }
