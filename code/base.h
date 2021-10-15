@@ -71,6 +71,8 @@ typedef double F64;
 #define CLAMP_TOP(a, b) MIN(a, b)
 #define CLAMP_BOT(a, b) MAX(a, b)
 
+#define ABS(a) ((a) >= 0) ? (a) : -(a)
+
 #define SWAP(a, b, type) STATEMENT(type swap=a; a=b; b=swap;)
 
 #define PI32 3.14159265359f
@@ -136,7 +138,7 @@ typedef double F64;
 
 #define DLL_REMOVE(f, l, n) DLL_REMOVE_EXPLICIT(f, l, n, next, prev);
 
-//~
+//~NOTE(sokus): memcpy, memset wrappers
 
 #define MEMORY_COPY(destination, source, size) memcpy(destination, source, size)
 #define MEMORY_SET(destination, value, size) memset(destination, value, size)
@@ -328,7 +330,7 @@ void String8ListPushExplicit(String8List *list, String8Node *node_memory, String
     node_memory->string = string;
     node_memory->style = (style_optional != 0) ? *style_optional : STRING8STYLE_DEFAULT;
     SLL_QUEUE_PUSH_BACK(list->first, list->last, node_memory);
-    list->node_count += 1;
+    ++list->node_count;
     list->total_size += string.size;
 }
 
@@ -397,15 +399,15 @@ String8List String8ListSplit(MemoryArena *arena, String8 string, U8 *split_chara
     U8 *ptr = string.str;
     U8 *word_first = ptr;
     U8 *opl = string.str + string.size;
-    for(;ptr < opl; ptr += 1)
+    for(; ptr < opl; ++ptr)
     {
         U8 byte = *ptr;
         bool is_split_byte = false;
-        for(size_t index = 0;
-            index < split_characters_count;
-            ++index)
+        for(size_t idx = 0;
+            idx < split_characters_count;
+            ++idx)
         {
-            if(byte == split_characters[index])
+            if(byte == split_characters[idx])
             {
                 is_split_byte = true;
                 break;

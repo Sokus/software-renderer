@@ -5,73 +5,13 @@
 
 #include "summoned.h"
 
-global U32 global_crc32_lookup_table[256] = {
-    0x00000000,0x77073096,0xEE0E612C,0x990951BA,0x076DC419,0x706AF48F,0xE963A535,0x9E6495A3,0x0EDB8832,0x79DCB8A4,0xE0D5E91E,0x97D2D988,0x09B64C2B,0x7EB17CBD,0xE7B82D07,0x90BF1D91,
-    0x1DB71064,0x6AB020F2,0xF3B97148,0x84BE41DE,0x1ADAD47D,0x6DDDE4EB,0xF4D4B551,0x83D385C7,0x136C9856,0x646BA8C0,0xFD62F97A,0x8A65C9EC,0x14015C4F,0x63066CD9,0xFA0F3D63,0x8D080DF5,
-    0x3B6E20C8,0x4C69105E,0xD56041E4,0xA2677172,0x3C03E4D1,0x4B04D447,0xD20D85FD,0xA50AB56B,0x35B5A8FA,0x42B2986C,0xDBBBC9D6,0xACBCF940,0x32D86CE3,0x45DF5C75,0xDCD60DCF,0xABD13D59,
-    0x26D930AC,0x51DE003A,0xC8D75180,0xBFD06116,0x21B4F4B5,0x56B3C423,0xCFBA9599,0xB8BDA50F,0x2802B89E,0x5F058808,0xC60CD9B2,0xB10BE924,0x2F6F7C87,0x58684C11,0xC1611DAB,0xB6662D3D,
-    0x76DC4190,0x01DB7106,0x98D220BC,0xEFD5102A,0x71B18589,0x06B6B51F,0x9FBFE4A5,0xE8B8D433,0x7807C9A2,0x0F00F934,0x9609A88E,0xE10E9818,0x7F6A0DBB,0x086D3D2D,0x91646C97,0xE6635C01,
-    0x6B6B51F4,0x1C6C6162,0x856530D8,0xF262004E,0x6C0695ED,0x1B01A57B,0x8208F4C1,0xF50FC457,0x65B0D9C6,0x12B7E950,0x8BBEB8EA,0xFCB9887C,0x62DD1DDF,0x15DA2D49,0x8CD37CF3,0xFBD44C65,
-    0x4DB26158,0x3AB551CE,0xA3BC0074,0xD4BB30E2,0x4ADFA541,0x3DD895D7,0xA4D1C46D,0xD3D6F4FB,0x4369E96A,0x346ED9FC,0xAD678846,0xDA60B8D0,0x44042D73,0x33031DE5,0xAA0A4C5F,0xDD0D7CC9,
-    0x5005713C,0x270241AA,0xBE0B1010,0xC90C2086,0x5768B525,0x206F85B3,0xB966D409,0xCE61E49F,0x5EDEF90E,0x29D9C998,0xB0D09822,0xC7D7A8B4,0x59B33D17,0x2EB40D81,0xB7BD5C3B,0xC0BA6CAD,
-    0xEDB88320,0x9ABFB3B6,0x03B6E20C,0x74B1D29A,0xEAD54739,0x9DD277AF,0x04DB2615,0x73DC1683,0xE3630B12,0x94643B84,0x0D6D6A3E,0x7A6A5AA8,0xE40ECF0B,0x9309FF9D,0x0A00AE27,0x7D079EB1,
-    0xF00F9344,0x8708A3D2,0x1E01F268,0x6906C2FE,0xF762575D,0x806567CB,0x196C3671,0x6E6B06E7,0xFED41B76,0x89D32BE0,0x10DA7A5A,0x67DD4ACC,0xF9B9DF6F,0x8EBEEFF9,0x17B7BE43,0x60B08ED5,
-    0xD6D6A3E8,0xA1D1937E,0x38D8C2C4,0x4FDFF252,0xD1BB67F1,0xA6BC5767,0x3FB506DD,0x48B2364B,0xD80D2BDA,0xAF0A1B4C,0x36034AF6,0x41047A60,0xDF60EFC3,0xA867DF55,0x316E8EEF,0x4669BE79,
-    0xCB61B38C,0xBC66831A,0x256FD2A0,0x5268E236,0xCC0C7795,0xBB0B4703,0x220216B9,0x5505262F,0xC5BA3BBE,0xB2BD0B28,0x2BB45A92,0x5CB36A04,0xC2D7FFA7,0xB5D0CF31,0x2CD99E8B,0x5BDEAE1D,
-    0x9B64C2B0,0xEC63F226,0x756AA39C,0x026D930A,0x9C0906A9,0xEB0E363F,0x72076785,0x05005713,0x95BF4A82,0xE2B87A14,0x7BB12BAE,0x0CB61B38,0x92D28E9B,0xE5D5BE0D,0x7CDCEFB7,0x0BDBDF21,
-    0x86D3D2D4,0xF1D4E242,0x68DDB3F8,0x1FDA836E,0x81BE16CD,0xF6B9265B,0x6FB077E1,0x18B74777,0x88085AE6,0xFF0F6A70,0x66063BCA,0x11010B5C,0x8F659EFF,0xF862AE69,0x616BFFD3,0x166CCF45,
-    0xA00AE278,0xD70DD2EE,0x4E048354,0x3903B3C2,0xA7672661,0xD06016F7,0x4969474D,0x3E6E77DB,0xAED16A4A,0xD9D65ADC,0x40DF0B66,0x37D83BF0,0xA9BCAE53,0xDEBB9EC5,0x47B2CF7F,0x30B5FFE9,
-    0xBDBDF21C,0xCABAC28A,0x53B39330,0x24B4A3A6,0xBAD03605,0xCDD70693,0x54DE5729,0x23D967BF,0xB3667A2E,0xC4614AB8,0x5D681B02,0x2A6F2B94,0xB40BBE37,0xC30C8EA1,0x5A05DF1B,0x2D02EF8D,
-};
-
-uint HashData(void* data_p, size_t data_size, uint seed)
-{
-    U32 crc = (U32)~seed;
-    U8* data = (U8 *)data_p;
-    U32* crc32_lut = global_crc32_lookup_table;
-    while (data_size-- != 0)
-        crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ *data++];
-    return (uint)(~crc);
-}
-
-uint HashStr(char* data_p, size_t data_size, uint seed)
-{
-    U32 crc = (U32)~seed;
-    U8* data = (U8 *)data_p;
-    U32* crc32_lut = global_crc32_lookup_table;
-    if (data_size != 0)
-    {
-        while (data_size-- != 0)
-        {
-            U8 c = *data++;
-            crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ c];
-        }
-    }
-    else
-    {
-        U8 c = *data;
-        while (c != 0)
-        {
-            crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ c];
-            c = *(++data);
-        }
-    }
-    return (uint)(~crc);
-}
-
-uint HashPtr(void* ptr, uint seed)
-{
-    U32 crc = (U32)~seed;
-    U32* crc32_lut = global_crc32_lookup_table;
-    crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ *((U8 *)ptr)];
-    return (uint)(~crc);
-}
+#include "summoned_hash.c"
 
 void
 DrawRectangle(OffscreenBuffer *buffer,
               F32 real_min_x, F32 real_min_y, F32 real_max_x, F32 real_max_y,
               F32 r, F32 g, F32 b, F32 a)
-{
+{   
     if(a > 0.0f)
     {
         int min_x = (int)RoundF32(real_min_x);
@@ -81,7 +21,7 @@ DrawRectangle(OffscreenBuffer *buffer,
         
         int screen_width = buffer->width;
         int screen_height = buffer->height;
-        
+		
         int screen_min_x = CLAMP_BOT(min_x, 0);
         int screen_min_y = CLAMP_BOT(screen_height - max_y - 1, 0);
         int screen_max_x = CLAMP_TOP(max_x, screen_width);
@@ -92,15 +32,11 @@ DrawRectangle(OffscreenBuffer *buffer,
                               + screen_min_x*buffer->bytes_per_pixel);
         U8 *dest;
         
-        for(int y = screen_min_y;
-            y < screen_max_y;
-            ++y)
+        for(int y = screen_min_y; y < screen_max_y; ++y)
         {
             dest = dest_row;
             
-            for(int x = screen_min_x;
-                x < screen_max_x;
-                ++x)
+            for(int x = screen_min_x; x < screen_max_x; ++x)
             {
                 *dest = (U8)((a*b*255.0f) + ((F32)(*dest)*(1.0f-a)));
                 ++dest;
@@ -120,11 +56,11 @@ DrawRectangle(OffscreenBuffer *buffer,
 }
 
 void
-DrawRectangleExplicit(OffscreenBuffer *buffer,
-                      F32 min_x, F32 min_y, F32 max_x, F32 max_y,
-                      F32 fill_r, F32 fill_g, F32 fill_b, F32 fill_a,
-                      BorderType border_style, F32 border_width,
-                      F32 border_r, F32 border_g, F32 border_b, F32 border_a)
+DrawRectangleEx(OffscreenBuffer *buffer,
+                F32 min_x, F32 min_y, F32 max_x, F32 max_y,
+                F32 fill_r, F32 fill_g, F32 fill_b, F32 fill_a,
+                UIBorder border_style, F32 border_width,
+                F32 border_r, F32 border_g, F32 border_b, F32 border_a)
 {
     F32 width = max_x - min_x;
     F32 height = max_y - min_y;
@@ -132,11 +68,11 @@ DrawRectangleExplicit(OffscreenBuffer *buffer,
     // TODO(sokus): Figure out if those functions should even work on floats.
     if(width > 0.0f && height > 0.0f)
     {
-        F32 inside_border = (border_style == BorderType_Centered ? border_width/2 :
-                             border_style == BorderType_Inner ? border_width : 0);
-        F32 outside_border = (border_style == BorderType_Centered ? border_width/2 :
-                              border_style == BorderType_Outer ? border_width : 0);
-        
+        F32 inside_border = (border_style == UIBorder_Centered ? border_width/2 :
+                             border_style == UIBorder_Inner ? border_width : 0);
+        F32 outside_border = (border_style == UIBorder_Centered ? border_width/2 :
+                              border_style == UIBorder_Outer ? border_width : 0);
+		
         if(fill_a > 0.0f
            && width - 2*inside_border > 0.0f
            && height - 2*inside_border > 0.0f)
@@ -174,7 +110,6 @@ DrawBitmap(OffscreenBuffer *buffer,
            F32 r, F32 g, F32 b, F32 a)
 {
     UNUSED(bitmap_h);
-    
     bitmap_data = bitmap_data + (int)part_y*(int)bitmap_w + (int)part_x;
     
     int min_x = (int)RoundF32(pos_x);
@@ -202,23 +137,19 @@ DrawBitmap(OffscreenBuffer *buffer,
     U32 *source_row = bitmap_data + source_offset_y*(int)bitmap_w + source_offset_x;
     U8 *dest_row = (U8 *)buffer->memory + min_y*buffer->pitch + min_x*buffer->bytes_per_pixel;
     
-    for(int y = min_y;
-        y < max_y;
-        ++y)
+    for(int y = min_y; y < max_y; ++y)
     {
         U32 *dest = (U32 *)dest_row;
         U32 *source = source_row;
         
-        for(int x = min_x;
-            x < max_x;
-            ++x)
+        for(int x = min_x; x < max_x; ++x)
         {
             F32 new_a = (F32)(*source >> 24) / 255.0f * a;
             
             F32 source_r = (F32)((*source >> 16) & 0xFF) * r;
             F32 source_g = (F32)((*source >> 8) & 0xFF) * g;
             F32 source_b = (F32)((*source >> 0) & 0xFF) * b;
-            
+			
             F32 dest_r = (F32)((*dest >> 16) & 0xFF);
             F32 dest_g = (F32)((*dest >> 8) & 0xFF);
             F32 dest_b = (F32)((*dest >> 0) & 0xFF);
@@ -266,9 +197,7 @@ DrawString(OffscreenBuffer *buffer, Font *font,
            F32 pos_x, F32 pos_y,
            F32 r, F32 g, F32 b, F32 a)
 {
-    for(size_t index = 0;
-        index < source_count;
-        index++)
+    for(size_t index = 0; index < source_count; ++index)
     {
         F32 offset_x = (F32)((int)index*font->glyph_w);
         
@@ -319,6 +248,30 @@ Rect RectAbs(F32 pos_x, F32 pos_y, F32 width, F32 height)
     result.x1 = pos_x + width;
     result.y1 = pos_y + height;
     return result;
+}
+
+V2 RectCenter(Rect rect)
+{
+    V2 result;
+    result.x = (rect.x0 + rect.x1) / 2.0f;
+    result.y = (rect.y0 + rect.y1) / 2.0f;
+    return result;
+}
+
+bool RectanglesOverlap(Rect a, Rect b)
+{
+    if(a.x0 == a.x1 || a.y0 == a.y1 || b.x0 == b.x1 || b.y0 == b.y1)
+        return false;
+    
+    // NOTE(sokus): I think those checks will break, if we 
+    // have rectangle with negative width or height.
+    if(a.x0 >= b.x1 || b.x0 >= a.x1)
+        return false;
+    
+    if(a.y0 >= b.y1 || b.y0 >= a.y1)
+        return false;
+    
+    return true;
 }
 
 void String8ListPlaceInRect(String8List *list, Rect rect, int glyph_w, int glyph_h, F32 line_jump, bool start_at_bottom)
@@ -392,15 +345,21 @@ void DrawString8List(OffscreenBuffer *buffer, Font *font, String8List *list)
     }
 }
 
+void InitializeInput(Input *input)
+{
+    for(int key_idx = 0; key_idx < Input_COUNT; ++key_idx)
+    {
+        input->keys_down_duration[key_idx] = -1.0f;
+    }
+}
+
 void InputUpdate(Input *input)
 {
     MEMORY_COPY(input->keys_down_duration_previous,
                 input->keys_down_duration,
                 sizeof(input->keys_down_duration));
     
-    for(int key_idx = 0;
-        key_idx < Input_COUNT;
-        ++key_idx)
+    for(int key_idx = 0; key_idx < Input_COUNT; ++key_idx)
     {
         F32 old_duration = input->keys_down_duration[key_idx];
         F32 new_duration = (input->keys_down[key_idx] ?
@@ -417,7 +376,7 @@ bool IsDown(Input *input, int key_index)
     ASSERT(key_index >= 0 && key_index < Input_COUNT);
     bool result = input->keys_down[key_index];
     return result;
-}
+} 
 
 bool WasDown(Input *input, int key_index)
 {
@@ -426,9 +385,367 @@ bool WasDown(Input *input, int key_index)
     return result;
 }
 
-void FrameStart(UIContext *ui, Input *input)
+bool Pressed(Input *input, int key_index)
 {
+    ASSERT(key_index >= 0 && key_index < Input_COUNT);
+    bool result = IsDown(input, key_index) && !WasDown(input, key_index);
+    return result;
+}
+
+bool KeyRepeat(UIState *ui, int key_index)
+{
+    ASSERT(key_index >= 0 && key_index < Input_COUNT);
+    Input *input = ui->input;
+    bool result = false;
+    if(IsDown(input, key_index))
+    {
+        int repeat_count_previous = (int)(input->keys_down_duration_previous[key_index]
+                                          / ui->key_repeat_interval);
+        int repeat_count_current = (int)(input->keys_down_duration[key_index]
+                                         / ui->key_repeat_interval);
+        if(repeat_count_previous != repeat_count_current)
+            result = true;
+    }
+    return result;
+}
+
+uint GetID(UIState *ui, char *str)
+{
+    uint seed = 0;
+    if(ui->id_stack_size > 0)
+        seed = ui->id_stack[ui->id_stack_size - 1];
+    uint result = HashStr(str, 0, seed);
+    return result;
+}
+
+void PushID(UIState *ui, uint id)
+{
+    ASSERT(ui->id_stack_size < ARRAY_COUNT(ui->id_stack));
+    ui->id_stack[ui->id_stack_size++] = id;
+}
+
+void PopID(UIState *ui)
+{
+    ASSERT(ui->id_stack_size > 0);
+    --ui->id_stack_size;
+}
+
+UIWindow *GetWindow(UIState *ui, uint id)
+{
+    uint windows_max = ARRAY_COUNT(ui->windows);
+    ASSERT(IsPowerOfTwo(windows_max));
+    uint idx = id & (windows_max - 1);
+    UIWindow *result = 0;
+    for(uint iteration = 0;
+        iteration < windows_max;
+        ++iteration)
+    {
+        UIWindow *window = ui->windows + idx;
+        if(window->was_active && window->id == id)
+        {
+            result = window;
+            break;
+        }
+        if(++idx >= windows_max)
+            idx = 0;
+    }
+    return result;
+}
+
+UIWindow *CreateWindow(UIState *ui, uint id)
+{
+    uint windows_max = ARRAY_COUNT(ui->windows);
+    ASSERT(IsPowerOfTwo(windows_max));
+    uint idx = id & (windows_max - 1);
+    UIWindow *result = 0;
+    for(uint iteration = 0;
+        iteration < windows_max;
+        ++iteration)
+    {
+        UIWindow *window = ui->windows + idx;
+        if(!window->was_active && !window->active)
+        {
+            result = window;
+            break;
+        }
+        if(++idx >= windows_max)
+            idx = 0;
+    }
     
+    ASSERT(result);
+    result->id = id;
+    return result;
+}
+
+void BeginWindow(UIState *ui, uint id)
+{
+    UIWindow *window = GetWindow(ui, id);
+    bool window_created = !window;
+    if(window_created)
+        window = CreateWindow(ui, id);
+    window->active = true;
+    window->parent = ui->current_window;
+    ui->current_window = window;
+    PushID(ui, id);
+}
+
+void EndWindow(UIState *ui)
+{
+    UIWindow *window = ui->current_window;
+    ASSERT(window != 0);
+    ui->current_window = ui->current_window->parent;
+    PopID(ui);
+}
+
+bool WasOpen(UIState *ui, uint id)
+{
+    bool result = false;
+    if(ui->was_open_stack_size > 0)
+    {
+        for(size_t idx = 0; idx < ui->was_open_stack_size; ++idx)
+        {
+            if(ui->was_open_stack[idx] == id)
+            {
+                result = true;
+                break;
+            }
+        }
+    }
+    return result;
+}
+
+bool WasTopmostOpen(UIState *ui, uint id)
+{
+    bool result = false;
+    if(ui->was_open_stack_size > 0)
+    {
+        if(ui->was_open_stack[ui->was_open_stack_size - 1] == id)
+            result = true;
+    }
+    return result;
+}
+
+void PushOpen(UIState *ui, uint id)
+{
+    ASSERT(ui->open_stack_size < ARRAY_COUNT(ui->open_stack));
+    ui->open_stack[ui->open_stack_size++] = id;
+}
+
+void PopOpen(UIState *ui)
+{
+    ASSERT(ui->open_stack_size > 0);
+    --ui->open_stack_size;
+}
+
+void NavLogic(UIState *ui, uint id, Rect rect)
+{
+    UIWindow *current_window = ui->current_window;
+    ASSERT(current_window != 0);
+    
+    // NOTE(sokus): Nav logic
+    if(current_window->last_nav_id == 0)
+    {
+        if(current_window->nav_new_best_id == 0)
+        {
+            // set next nav_id if we are not focused on anything
+            // and no next nav_id was set yet
+            current_window->nav_new_best_id = id;
+            current_window->nav_new_best_rect = rect;
+            current_window->nav_min_distance = 0;
+        }
+    }
+    else
+    {
+        if(current_window->last_nav_id == id)
+        {
+            // keep the nav_id alive
+            current_window->nav_id = id;
+            current_window->nav_rect = rect;
+        }
+        else
+        {
+            if(WasTopmostOpen(ui, current_window->id))
+            {
+                if(ui->nav_dir != UINavDir_None)
+                {
+                    Rect nav_clip_rect = current_window->nav_rect;
+                    nav_clip_rect.x0 = CLAMP_BOT(nav_clip_rect.x0, 0);
+                    nav_clip_rect.x1 = CLAMP_TOP(nav_clip_rect.x1, (F32)ui->offscreen_buffer->width);
+                    nav_clip_rect.y0 = CLAMP_BOT(nav_clip_rect.y0, 0);
+                    nav_clip_rect.y1 = CLAMP_TOP(nav_clip_rect.y1, (F32)ui->offscreen_buffer->height);
+                    
+                    V2 nav_rect_pos = RectCenter(current_window->nav_rect);
+                    V2 element_rect_pos = RectCenter(rect);
+                    
+                    uint axis_idx = 0;
+                    switch(ui->nav_dir)
+                    {
+                        case UINavDir_Up:
+                        {
+                            nav_clip_rect.y1 = (F32)ui->offscreen_buffer->height;
+                            axis_idx = 1; 
+                        } break;
+                        
+                        case UINavDir_Left:
+                        {
+                            nav_clip_rect.x0 = 0;
+                            axis_idx = 0;
+                        } break;
+                        
+                        case UINavDir_Down:
+                        {
+                            nav_clip_rect.y0 = 0;
+                            axis_idx = 1;
+                        } break;
+                        
+                        case UINavDir_Right:
+                        {
+                            nav_clip_rect.x1 = (F32)ui->offscreen_buffer->height;
+                            axis_idx = 0;
+                        } break;
+                        
+                        default: break;
+                    }
+                    
+                    if(RectanglesOverlap(rect, nav_clip_rect))
+                    {
+                        F32 distance = ABS(element_rect_pos.e[axis_idx] - nav_rect_pos.e[axis_idx]);
+                        
+                        if(current_window->nav_new_best_id == 0
+                           || distance <= current_window->nav_min_distance)
+                        {
+                            current_window->nav_new_best_id = id;
+                            current_window->nav_new_best_rect = rect;
+                            current_window->nav_min_distance = distance;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    
+}
+
+bool BeginMenu(UIState *ui, char *name, Rect rect)
+{
+    UIWindow *current_window = ui->current_window;
+    ASSERT(current_window != 0);
+    uint id = GetID(ui, name);
+    
+    NavLogic(ui, id, rect);
+    
+    bool focused = current_window->last_nav_id == id;
+    bool pressed = (focused
+                    && WasTopmostOpen(ui, current_window->id)
+                    && Pressed(ui->input, Input_ActionDown));
+    
+    bool is_open = (WasOpen(ui, id) || pressed);
+    if(is_open)
+        PushOpen(ui, id);
+    
+    // render
+    UIColor fill_color_idx = (is_open ? UIColor_FillActive :
+                              focused ? UIColor_FillFocused :
+                              UIColor_FillDefault);
+    UIColor border_color_idx = (is_open ? UIColor_BorderActive :
+                                focused ? UIColor_BorderFocused :
+                                UIColor_BorderDefault);
+    V4 fill_color = ui->colors[fill_color_idx];
+    V4 border_color = ui->colors[border_color_idx];
+    DrawRectangleEx(ui->offscreen_buffer,
+                    rect.x0, rect.y0, rect.x1, rect.y1,
+                    fill_color.r, fill_color.g, fill_color.b, fill_color.a,
+                    ui->border_type, ui->border_width,
+                    border_color.r, border_color.g, border_color.b, border_color.a);
+    
+    BeginWindow(ui, id);
+    
+    return is_open;
+}
+
+bool Button(UIState *ui, char *name, Rect rect)
+{
+    UIWindow *current_window = ui->current_window;
+    ASSERT(current_window != 0);
+    uint id = GetID(ui, name);
+    
+    NavLogic(ui, id, rect);
+    
+    bool focused = current_window->last_nav_id == id;
+    bool pressed = (focused
+                    && WasTopmostOpen(ui, current_window->id)
+                    && Pressed(ui->input, Input_ActionDown));
+    
+    UIColor fill_color_idx = (pressed  ? UIColor_FillActive :
+                              focused ? UIColor_FillFocused :
+                              UIColor_FillDefault);
+    UIColor border_color_idx = (pressed ? UIColor_BorderActive :
+                                focused ? UIColor_BorderFocused :
+                                UIColor_BorderDefault);
+    
+    V4 fill_color = ui->colors[fill_color_idx];
+    V4 border_color = ui->colors[border_color_idx];
+    DrawRectangleEx(ui->offscreen_buffer,
+                    rect.x0, rect.y0, rect.x1, rect.y1,
+                    fill_color.r, fill_color.g, fill_color.b, fill_color.a,
+                    ui->border_type, ui->border_width,
+                    border_color.r, border_color.g, border_color.b, border_color.a);
+    
+    return pressed;
+}
+
+void EndMenu(UIState *ui)
+{
+    EndWindow(ui);
+}
+
+void BeginFrame(UIState *ui)
+{
+    ui->current_window = 0;
+    MEMORY_COPY(ui->was_open_stack, ui->open_stack, sizeof(uint)*ui->open_stack_size);
+    ui->was_open_stack_size = ui->open_stack_size;
+    ui->open_stack_size = 0;
+    
+    UIWindow *window = ui->windows;
+    for(uint idx = 0; idx < ARRAY_COUNT(ui->windows); ++idx)
+    {
+        window->was_active = window->active;
+        window->active = false;
+        window->last_nav_id = window->nav_id;
+        window->nav_id = 0;
+        window->nav_new_best_id = 0;
+        ++window;
+    }
+    
+    ui->nav_dir = (KeyRepeat(ui, Input_DPadUp)    ? UINavDir_Up    :
+                   KeyRepeat(ui, Input_DPadDown)  ? UINavDir_Down  :
+                   KeyRepeat(ui, Input_DPadLeft)  ? UINavDir_Left  :
+                   KeyRepeat(ui, Input_DPadRight) ? UINavDir_Right : UINavDir_None);
+    
+    uint window_id = GetID(ui, "root_window");
+    BeginWindow(ui, window_id);
+    PushOpen(ui, window_id);
+}
+
+void EndFrame(UIState *ui)
+{
+    ASSERT(ui->open_stack_size == 1);
+    
+    UIWindow *window = ui->current_window;
+    for(uint idx = 0; idx < ARRAY_COUNT(ui->windows); ++idx)
+    {
+        if(window->active && window->nav_new_best_id != 0)
+        {
+            window->nav_id = window->nav_new_best_id;
+            window->nav_rect = window->nav_new_best_rect;
+        }
+        ++window;
+    }
+    
+    if(Pressed(ui->input, Input_ActionRight) && ui->open_stack_size > 1)
+        PopOpen(ui);
+    
+    EndWindow(ui);
 }
 
 void GameUpdateAndRender(GameMemory *memory, Input *input, OffscreenBuffer *buffer, FontPack *font_pack)
@@ -436,42 +753,71 @@ void GameUpdateAndRender(GameMemory *memory, Input *input, OffscreenBuffer *buff
     UNUSED(font_pack);
     
     GameState *game_state = (GameState *)memory->permanent_storage;
+    UIState *ui = &game_state->ui;
     
     if(!(memory->is_initialized))
     {
-        game_state->time = 0;
-        
         InitializeArena(&game_state->arena,
                         (U8 *)memory->permanent_storage + sizeof(GameState),
                         0);
+        
+        InitializeInput(input);
+        
+        ui->key_repeat_interval = 0.25f;
+        
+        ASSERT(IsPowerOfTwo(ARRAY_COUNT(ui->windows)));
+        ui->colors[UIColor_FillDefault]   = V4F32(0.125f, 0.133f, 0.144f, 0.6f);
+        ui->colors[UIColor_FillFocused]   = V4F32(0.125f, 0.133f, 0.5f,   0.6f);
+        ui->colors[UIColor_FillActive]    = V4F32(0.125f, 0.500f, 0.144f, 0.6f);
+        ui->colors[UIColor_BorderDefault] = V4F32(0.203f, 0.211f, 0.222f, 0.6f);
+        ui->colors[UIColor_BorderFocused] = V4F32(0.203f, 0.211f, 0.6f,   0.6f);
+        ui->colors[UIColor_BorderActive]  = V4F32(0.203f, 0.6f,   0.222f, 0.6f);
+        ui->colors[UIColor_Text]          = V4F32(0.6f,   0.6f,   0.6f,   0.6f);
+        
+        ui->border_type = UIBorder_Inner;
+        ui->border_width = 4;
         
         memory->is_initialized = true;
     }
     
     InputUpdate(input);
     game_state->time += input->time_dt;
+    ui->offscreen_buffer = buffer;
+    ui->input = input;
     
     MemoryArena transient_arena;
     InitializeArena(&transient_arena,
                     (U8 *)memory->transient_storage,
                     MEGABYTES(1));
     
-    
-    
     DrawRectangle(buffer, 0, 0, (F32)buffer->width, (F32)buffer->height, 0, 0, 0, 1);
     
-    for(int idx = 0;
-        idx < Input_COUNT;
-        ++idx)
+    BeginFrame(ui);
+    
+    Button(ui, "a--", RectAbs(50, 140, 100, 40));
+    Button(ui, "b--", RectAbs(50, 95, 100, 40));
+    Button(ui, "c--", RectAbs(50, 50, 100, 40));
+    
+    Button(ui, "-a-", RectAbs(155, 145, 100, 40));
+    Button(ui, "-b-", RectAbs(155, 100, 100, 40));
+    Button(ui, "-c-", RectAbs(155, 55, 100, 40));
+    
+    Button(ui, "--a", RectAbs(260, 150, 100, 40));
+    Button(ui, "--b", RectAbs(260, 105, 100, 40));
+    Button(ui, "--c", RectAbs(260, 60, 100, 40));
+    
+    EndFrame(ui);
+    
+    for(int idx = 0; idx < Input_COUNT; ++idx)
     {
         bool is_down = IsDown(input, idx);
         bool was_down = WasDown(input, idx);
         
         F32 r = !was_down && is_down;
-        F32 g = was_down && is_down;
-        F32 b = was_down && !is_down;
-        DrawRectangle(buffer, (F32)idx*10, 0, (F32)(idx+1)*10, 10, r, g, b, 1);
+        F32 g = is_down;
+        F32 b = was_down;
+        DrawRectangle(buffer, (F32)idx*20, 0, (F32)(idx+1)*20, 20, r, g, b, 1);
     }
     
-    ++game_state->frame_index;
+    ++game_state->frame_idx;
 }

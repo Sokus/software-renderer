@@ -226,7 +226,7 @@ Win32MakeAsciiFont(char *font_name_utf8, int font_size, Font *out_font, FontRast
             out_font->data = (U32 *)font_bits;
             
             SetTextColor(font_dc, RGB(255, 255, 255));
-            for(int i=0; i<255; ++i)
+            for(int i = 0; i < 255; ++i)
             {
                 int x = i % 16;
                 int y = i / 16;
@@ -234,7 +234,7 @@ Win32MakeAsciiFont(char *font_name_utf8, int font_size, Font *out_font, FontRast
             }
             
             U32 *pixels = out_font->data;
-            for(int i=0; i<out_font->pitch*out_font->h; ++i)
+            for(int i = 0; i < out_font->pitch*out_font->h; ++i)
             {
                 U32 pixel_value = *(pixels+i);
                 int r = (pixel_value >> 16) & 0xFF;
@@ -785,12 +785,12 @@ WinMain(HINSTANCE instance,
                     input.mouse_z = 0; // TODO(casey): Support mousewheel?
                     
                     DWORD max_controller_count = XUSER_MAX_COUNT;
-                    for(DWORD controller_index = 0;
-                        controller_index < max_controller_count;
-                        ++controller_index)
+                    for(DWORD controller_idx = 0;
+                        controller_idx < max_controller_count;
+                        ++controller_idx)
                     {
                         XINPUT_STATE controller_state;
-                        if(global_xinput_get_state(controller_index, &controller_state) == ERROR_SUCCESS)
+                        if(global_xinput_get_state(controller_idx, &controller_state) == ERROR_SUCCESS)
                         {
                             XINPUT_GAMEPAD *pad = &controller_state.Gamepad;
                             
@@ -826,18 +826,14 @@ WinMain(HINSTANCE instance,
                     CLAMP(-1.0f, input.stick_x, 1.0f);
                     CLAMP(-1.0f, input.stick_y, 1.0f);
                     
-                    for(int idx = 0;
-                        idx < Input_COUNT;
-                        ++idx)
+                    for(int idx = 0; idx < Input_COUNT; ++idx)
                     {
                         input.keys_down[idx] = keyboard_down[idx] || pad_down[idx];
                     }
                     
                     if(!global_in_focus)
                     {
-                        for(int idx = 0;
-                            idx < Input_COUNT;
-                            ++idx)
+                        for(int idx = 0; idx < Input_COUNT; ++idx)
                         {
                             input.keys_down[idx] = false;
                         }

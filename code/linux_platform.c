@@ -256,24 +256,24 @@ internal void
 SDLOpenGameControllers(void)
 {
     int max_joysticks = SDL_NumJoysticks();
-    int controller_index = 0;
-    for(int joystick_index=0;
-        joystick_index < max_joysticks && joystick_index < MAX_CONTROLLERS;
-        ++joystick_index)
+    int controller_idx = 0;
+    for(int joystick_idx = 0;
+        joystick_idx < max_joysticks && joystick_idx < MAX_CONTROLLERS;
+        ++joystick_idx)
     {
-        if(!SDL_IsGameController(joystick_index))
+        if(!SDL_IsGameController(joystick_idx))
         {
             continue;
         }
         
-        global_controller_handles[controller_index] = SDL_GameControllerOpen(joystick_index);
+        global_controller_handles[controller_idx] = SDL_GameControllerOpen(joystick_idx);
         SDL_Joystick *joystick_handle =
-            SDL_GameControllerGetJoystick(global_controller_handles[controller_index]);
-        global_rumble_handles[controller_index] = SDL_HapticOpenFromJoystick(joystick_handle);
-        if(SDL_HapticRumbleInit(global_rumble_handles[controller_index]) != 0)
+            SDL_GameControllerGetJoystick(global_controller_handles[controller_idx]);
+        global_rumble_handles[controller_idx] = SDL_HapticOpenFromJoystick(joystick_handle);
+        if(SDL_HapticRumbleInit(global_rumble_handles[controller_idx]) != 0)
         {
-            SDL_HapticClose(global_rumble_handles[controller_index]);
-            global_rumble_handles[controller_index] = 0;
+            SDL_HapticClose(global_rumble_handles[controller_idx]);
+            global_rumble_handles[controller_idx] = 0;
         }
         
         ++controller_index;
@@ -312,18 +312,16 @@ SDLProcessGameControllerAxisValue(I16 value, I16 deadzone_threshold)
 internal void
 SDLCloseGameControllers()
 {
-    for(int controller_index = 0;
-        controller_index < MAX_CONTROLLERS;
-        ++controller_index)
+    for(int controller_idx = 0; controller_idx < MAX_CONTROLLERS; ++controller_idx)
     {
-        if(global_controller_handles[controller_index])
+        if(global_controller_handles[controller_idx])
         {
-            if(global_rumble_handles[controller_index])
+            if(global_rumble_handles[controller_idx])
             {
-                SDL_HapticClose(global_rumble_handles[controller_index]);
+                SDL_HapticClose(global_rumble_handles[controller_idx]);
             }
             
-            SDL_GameControllerClose(global_controller_handles[controller_index]);
+            SDL_GameControllerClose(global_controller_handles[controller_idx]);
         }
     }
 }
@@ -444,10 +442,10 @@ SDLMakeAsciiFont(char *font_name_utf8, int font_size, Font *out_font, FontRaster
                                      MAP_ANON | MAP_PRIVATE,
                                      -1, 0);
         
-        for(int char_index=0; char_index<255; ++char_index)
+        for(int char_idx = 0; char_idx < 255; ++char_idx)
         {
-            int atlas_x = char_index % 16;
-            int atlas_y = char_index / 16;
+            int atlas_x = char_idx % 16;
+            int atlas_y = char_idx / 16;
             
             U32 *first_char_pixel = (out_font->data +
                                      (atlas_y * out_font->glyph_h * out_font->w) +
@@ -456,7 +454,7 @@ SDLMakeAsciiFont(char *font_name_utf8, int font_size, Font *out_font, FontRaster
             // NOTE(sokus): Color doesn't work, but we don't care since the letters are supposed
             // to be white anyway.
             SDL_Color text_color = {255, 255, 255, 255};
-            SDL_Surface *surface = TTF_RenderGlyph_Blended(font, charset[char_index], text_color); 
+            SDL_Surface *surface = TTF_RenderGlyph_Blended(font, charset[char_idx], text_color); 
             
             // NOTE(sokus): We will not get a surface for (char)0 etc
             if(surface)
@@ -597,12 +595,12 @@ int main()
                 ControllerInput *new_keyboard_controller = GetController(new_input, 0);
                 *new_keyboard_controller = (ControllerInput){0};
                 
-                for(size_t button_index = 0;
-                    ++button_index < ARRAY_COUNT(new_keyboard_controller->buttons);
-                    ++button_index)
+                for(size_t button_idx = 0;
+                    ++button_idx < ARRAY_COUNT(new_keyboard_controller->buttons);
+                    ++button_idx)
                 {
-                    new_keyboard_controller->buttons[button_index].ended_down =
-                        old_keyboard_controller->buttons[button_index].ended_down;
+                    new_keyboard_controller->buttons[button_idx].ended_down =
+                        old_keyboard_controller->buttons[button_idx].ended_down;
                 }
                 
                 SDL_Event event;
@@ -611,41 +609,41 @@ int main()
                     SDLHandleEvent(&event, new_keyboard_controller);
                 }
                 
-                for(int controller_index = 0;
-                    controller_index < MAX_CONTROLLERS;
-                    ++controller_index)
+                for(int controller_idx = 0;
+                    controller_idx < MAX_CONTROLLERS;
+                    ++controller_idx)
                 {
-                    if(global_controller_handles[controller_index] != 0 &&
-                       SDL_GameControllerGetAttached(global_controller_handles[controller_index]))
+                    if(global_controller_handles[controller_idx] != 0 &&
+                       SDL_GameControllerGetAttached(global_controller_handles[controller_idx]))
                     {
-                        ControllerInput *old_controller = GetController(old_input, controller_index+1);
-                        ControllerInput *new_controller = GetController(new_input, controller_index+1);
+                        ControllerInput *old_controller = GetController(old_input, controller_idx+1);
+                        ControllerInput *new_controller = GetController(new_input, controller_idx+1);
                         
                         new_controller->is_connected = true;
                         
-                        bool move_up = SDL_GameControllerGetButton(global_controller_handles[controller_index],
+                        bool move_up = SDL_GameControllerGetButton(global_controller_handles[controller_idx],
                                                                    SDL_CONTROLLER_BUTTON_DPAD_UP);
-                        bool move_left = SDL_GameControllerGetButton(global_controller_handles[controller_index],
+                        bool move_left = SDL_GameControllerGetButton(global_controller_handles[controller_idx],
                                                                      SDL_CONTROLLER_BUTTON_DPAD_LEFT);
-                        bool move_down = SDL_GameControllerGetButton(global_controller_handles[controller_index],
+                        bool move_down = SDL_GameControllerGetButton(global_controller_handles[controller_idx],
                                                                      SDL_CONTROLLER_BUTTON_DPAD_DOWN);
-                        bool move_right = SDL_GameControllerGetButton(global_controller_handles[controller_index],
+                        bool move_right = SDL_GameControllerGetButton(global_controller_handles[controller_idx],
                                                                       SDL_CONTROLLER_BUTTON_DPAD_RIGHT);
-                        bool action_up = SDL_GameControllerGetButton(global_controller_handles[controller_index],
+                        bool action_up = SDL_GameControllerGetButton(global_controller_handles[controller_idx],
                                                                      SDL_CONTROLLER_BUTTON_Y);
-                        bool action_left = SDL_GameControllerGetButton(global_controller_handles[controller_index],
+                        bool action_left = SDL_GameControllerGetButton(global_controller_handles[controller_idx],
                                                                        SDL_CONTROLLER_BUTTON_X);
-                        bool action_down = SDL_GameControllerGetButton(global_controller_handles[controller_index],
+                        bool action_down = SDL_GameControllerGetButton(global_controller_handles[controller_idx],
                                                                        SDL_CONTROLLER_BUTTON_A);
-                        bool action_right = SDL_GameControllerGetButton(global_controller_handles[controller_index],
+                        bool action_right = SDL_GameControllerGetButton(global_controller_handles[controller_idx],
                                                                         SDL_CONTROLLER_BUTTON_B);
-                        bool select = SDL_GameControllerGetButton(global_controller_handles[controller_index],
+                        bool select = SDL_GameControllerGetButton(global_controller_handles[controller_idx],
                                                                   SDL_CONTROLLER_BUTTON_BACK);
-                        bool start = SDL_GameControllerGetButton(global_controller_handles[controller_index],
+                        bool start = SDL_GameControllerGetButton(global_controller_handles[controller_idx],
                                                                  SDL_CONTROLLER_BUTTON_START);
-                        bool left_bumper = SDL_GameControllerGetButton(global_controller_handles[controller_index],
+                        bool left_bumper = SDL_GameControllerGetButton(global_controller_handles[controller_idx],
                                                                        SDL_CONTROLLER_BUTTON_LEFTSHOULDER);
-                        bool right_bumper = SDL_GameControllerGetButton(global_controller_handles[controller_index],
+                        bool right_bumper = SDL_GameControllerGetButton(global_controller_handles[controller_idx],
                                                                         SDL_CONTROLLER_BUTTON_RIGHTSHOULDER);
                         SDLProcessGameControllerButton(&(old_controller->move_up),
                                                        &(new_controller->move_up),
@@ -685,12 +683,12 @@ int main()
                                                        right_bumper);
                         
                         I16 stick_average_x_raw =
-                            SDL_GameControllerGetAxis(global_controller_handles[controller_index], 
+                            SDL_GameControllerGetAxis(global_controller_handles[controller_idx], 
                                                       SDL_CONTROLLER_AXIS_LEFTX);
                         new_controller->stick_average_x = SDLProcessGameControllerAxisValue(stick_average_x_raw, 1);
                         
                         I16 stick_average_y_raw =
-                            SDL_GameControllerGetAxis(global_controller_handles[controller_index],
+                            SDL_GameControllerGetAxis(global_controller_handles[controller_idx],
                                                       SDL_CONTROLLER_AXIS_LEFTY);
                         new_controller->stick_average_y = -SDLProcessGameControllerAxisValue(stick_average_y_raw, 1);
                         
