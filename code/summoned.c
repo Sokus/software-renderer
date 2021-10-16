@@ -541,6 +541,7 @@ void NavLogic(UIState *ui, uint id, Rect rect)
             current_window->nav_new_id = id;
             current_window->nav_new_rect = rect;
         }
+
     }
     else
     {
@@ -659,6 +660,22 @@ void EndMenu(UIState *ui)
 
 void BeginFrame(UIState *ui)
 {
+    UINavDir nav_dir = (KeyRepeat(ui, Input_DPadUp)    ? UINavDir_Up    :
+                        KeyRepeat(ui, Input_DPadDown)  ? UINavDir_Down  :
+                        KeyRepeat(ui, Input_DPadLeft)  ? UINavDir_Left  :
+                        KeyRepeat(ui, Input_DPadRight) ? UINavDir_Right : UINavDir_None);
+    if(nav_dir)
+    {
+        UIWindow *window = GetWindow(ui, ui->was_topmost_open_id);
+        NavCandidate *nav_candidate = ui->nav_candidates + (nav_dir - 1);
+        
+        if(nav_candidate->id != 0)
+        {
+            window->new_nav_id = nav_candidate->id;
+            window->new_nav_rect = nav_candidate->rect;
+        }
+    }
+    
     ui->current_window = 0;
     
     if(ui->topmost_open != 0)
@@ -752,12 +769,12 @@ void BeginFrame(UIState *ui)
     uint window_id = GetID(ui, "root_window");
     BeginWindow(ui, window_id);
     PushOpen(ui, window_id);
+    
 }
 
 
 void EndFrame(UIState *ui)
 {
-    
     if(Pressed(ui->input, Input_ActionRight) && ui->open_stack_size > 1)
         PopOpen(ui);
     
@@ -848,7 +865,8 @@ void GameUpdateAndRender(GameMemory *memory, Input *input, OffscreenBuffer *buff
         F32 r = !was_down && is_down;
         F32 g = is_down;
         F32 b = was_down;
-        DrawRectangle(buffer, (F32)idx*20, 0, (F32)(idx+1)*20, 20, r, g, b, 1);
+        F32 a = ((r != 0 || g != 0 || b != 0) ? 1.0f : 0.0f);
+        DrawRectangle(buffer, (F32)idx*20, 0, (F32)(idx+1)*20, 20, r, g, b, a);
     }
     
     ++game_state->frame_idx;
