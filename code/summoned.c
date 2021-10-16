@@ -441,7 +441,7 @@ UIWindow *GetWindow(UIState *ui, uint id)
         ++iteration)
     {
         UIWindow *window = ui->windows + idx;
-        if(window->was_active && window->id == id)
+        if((window->was_active || window->active) && window->id == id)
         {
             result = window;
             break;
@@ -514,16 +514,6 @@ bool WasOpen(UIState *ui, uint id)
     return result;
 }
 
-uint WasTopmostOpen(UIState *ui)
-{
-    uint result = 0;
-    if(ui->was_open_stack_size > 0)
-    {
-        result = ui->was_open_stack[ui->was_open_stack_size - 1];
-    }
-    return result;
-}
-
 void PushOpen(UIState *ui, uint id)
 {
     ASSERT(ui->open_stack_size < ARRAY_COUNT(ui->open_stack));
@@ -542,54 +532,56 @@ void NavLogic(UIState *ui, uint id, Rect rect)
     ASSERT(current_window != 0);
     
     // NOTE(sokus): Nav logic
-    bool set_nav_id_and_rect = false;
-    if(current_window->last_nav_id == 0)
+    if(current_window->nav_old_id == 0)
     {
-        if(current_window->new_nav_id == 0)
-            set_nav_id_and_rect = true;
+        if(current_window->nav_new_id == 0)
+        {
+            // set next nav_id if we are not focused on anything
+            // and no next nav_id was set yet
+            current_window->nav_new_id = id;
+            current_window->nav_new_rect = rect;
+        }
+
     }
     else
     {
-        if(current_window->last_nav_id == id)
+        if(current_window->nav_old_id == id)
         {
-            set_nav_id_and_rect = true;
+            // keep the nav_id alive
+            current_window->nav_new_id = id;
+            current_window->nav_new_rect = rect;
         }
         else
         {
-            if(ui->was_topmost_open_id == current_window->id)
+            if(current_window->id == ui->topmost_open)
             {
-                Rect *nav_clip_rects = current_window->nav_clip_rects;
-                for(uint direction_idx = 0;
-                    direction_idx < ARRAY_COUNT(current_window->nav_clip_rects);
-                    ++direction_idx)
+                UINavCandidate *nav_candidate = ui->nav_candidates;
+                Rect *nav_clip_region = ui->nav_clip_regions;
+                
+                for(uint dir_idx = 0;
+                    dir_idx < ARRAY_COUNT(ui->nav_clip_regions);
+                    ++dir_idx)
                 {
-                    if(RectanglesOverlap(rect, nav_clip_rects[direction_idx]))
+                    if(RectanglesOverlap(rect, *nav_clip_region))
                     {
-                        V2 nav_rect_pos = RectCenter(current_window->last_nav_rect);
-                        V2 element_rect_pos = RectCenter(rect);
-                        V2 offset = SubtractV2(nav_rect_pos, element_rect_pos);
-                        F32 distance = V2LengthSquared(offset);
-                        
-                        NavCandidate *current_nav_candidate = ui->nav_candidates + direction_idx;
-                        if(current_nav_candidate->id == 0
-                           || distance <= current_nav_candidate->distance)
+                        V2 nav_rect_center = RectCenter(current_window->nav_old_rect);
+                        V2 element_center = RectCenter(rect);
+                        F32 distance = MagnitudeSq(SubtractV2(nav_rect_center, element_center));
+                        if(nav_candidate->id == 0
+                           || distance <= nav_candidate->distance)
                         {
-                            current_nav_candidate->id = id;
-                            current_nav_candidate->rect = rect;
-                            current_nav_candidate->distance = distance;
+                            nav_candidate->id = id;
+                            nav_candidate->rect = rect;
+                            nav_candidate->distance = distance;
                         }
                     }
+                    
+                    ++nav_candidate;
+                    ++nav_clip_region;
                 }
             }
         }
     }
-    
-    if(set_nav_id_and_rect)
-    {
-        current_window->new_nav_id = id;
-        current_window->new_nav_rect = rect;
-    }
-    
 }
 
 bool BeginMenu(UIState *ui, char *name, Rect rect)
@@ -600,9 +592,9 @@ bool BeginMenu(UIState *ui, char *name, Rect rect)
     
     NavLogic(ui, id, rect);
     
-    bool focused = current_window->last_nav_id == id;
+    bool focused = current_window->nav_old_id == id;
     bool pressed = (focused
-                    && current_window->id == ui->was_topmost_open_id
+                    && current_window->id == ui->was_topmost_open
                     && Pressed(ui->input, Input_ActionDown));
     
     bool is_open = (WasOpen(ui, id) || pressed);
@@ -633,13 +625,14 @@ bool Button(UIState *ui, char *name, Rect rect)
 {
     UIWindow *current_window = ui->current_window;
     ASSERT(current_window != 0);
+    
     uint id = GetID(ui, name);
     
     NavLogic(ui, id, rect);
     
-    bool focused = current_window->last_nav_id == id;
+    bool focused = current_window->nav_old_id == id;
     bool pressed = (focused
-                    && current_window->id == ui->was_topmost_open_id
+                    && current_window->id == ui->was_topmost_open
                     && Pressed(ui->input, Input_ActionDown));
     
     UIColor fill_color_idx = (pressed  ? UIColor_FillActive :
@@ -684,27 +677,93 @@ void BeginFrame(UIState *ui)
     }
     
     ui->current_window = 0;
-    MEMORY_COPY(ui->was_open_stack, ui->open_stack, sizeof(uint)*ui->open_stack_size);
-    ui->was_open_stack_size = ui->open_stack_size;
-    ui->open_stack_size = 0;
     
-    UIWindow *window = ui->windows;
-    for(uint idx = 0; idx < ARRAY_COUNT(ui->windows); ++idx)
+    if(ui->topmost_open != 0)
     {
-        window->was_active = window->active;
-        window->active = false;
-        window->last_nav_id = window->new_nav_id;
-        window->new_nav_id = 0;
-        window->last_nav_rect = window->new_nav_rect;
-        ++window;
+        UIWindow *topmost_window = GetWindow(ui, ui->topmost_open);
+        if(ui->was_topmost_open == ui->topmost_open)
+        {
+            Input *input = ui->input;
+            
+            InputKey directional_keys[] = { Input_DPadUp, Input_DPadLeft, Input_DPadDown, Input_DPadRight };
+            uint last_pressed_directional_key_idx = 0;
+            F32 shortest_key_press_duration = -1.0f;
+            
+            for(uint our_key_idx = 0; our_key_idx < ARRAY_COUNT(directional_keys); ++our_key_idx)
+            {
+                InputKey key_idx = directional_keys[our_key_idx];
+                F32 key_press_duration = input->keys_down_duration[key_idx];
+                
+                if(key_press_duration >= 0.0f
+                   && (shortest_key_press_duration < 0.0f
+                       || key_press_duration < shortest_key_press_duration))
+                {
+                    last_pressed_directional_key_idx = our_key_idx;
+                    shortest_key_press_duration = key_press_duration;
+                }
+            }
+            
+            UINavCandidate *nav_candidate = ui->nav_candidates + last_pressed_directional_key_idx;
+            if(shortest_key_press_duration >= 0.0f
+               && nav_candidate->id != 0
+               && KeyRepeat(ui, directional_keys[last_pressed_directional_key_idx]))
+            {
+                topmost_window->nav_new_id = nav_candidate->id;
+                topmost_window->nav_new_rect = nav_candidate->rect;
+            }
+        }
+        
+        Rect *nav_clip_regions = ui->nav_clip_regions;
+        Rect nav_new_rect = topmost_window->nav_new_rect;
+        F32 buffer_w = (F32)ui->offscreen_buffer->width;
+        F32 buffer_h = (F32)ui->offscreen_buffer->height;
+        for(uint idx = 0; idx < ARRAY_COUNT(ui->nav_clip_regions); ++idx)
+        {
+            nav_clip_regions[idx].x0 = CLAMP(0, nav_new_rect.x0, buffer_w);
+            nav_clip_regions[idx].y0 = CLAMP(0, nav_new_rect.y0, buffer_h);
+            nav_clip_regions[idx].x1 = CLAMP(0, nav_new_rect.x1, buffer_w);
+            nav_clip_regions[idx].y1 = CLAMP(0, nav_new_rect.y1, buffer_h);
+        }
+        
+        nav_clip_regions[0].y0 = nav_clip_regions[0].y1;
+        nav_clip_regions[0].y1 = buffer_h - 1.0f;
+        
+        nav_clip_regions[1].x1 = nav_clip_regions[1].x0;
+        nav_clip_regions[1].x0 = 0.0f;
+        
+        nav_clip_regions[2].y1 = nav_clip_regions[2].y0;
+        nav_clip_regions[2].y0 = 0.0f;
+        
+        nav_clip_regions[3].x0 = nav_clip_regions[3].x1;
+        nav_clip_regions[3].x1 = buffer_w;
+        
+        for(uint idx = 0; idx < ARRAY_COUNT(ui->nav_clip_regions); ++idx)
+        {
+            DrawRectangleEx(ui->offscreen_buffer,
+                            nav_clip_regions[idx].x0,
+                            nav_clip_regions[idx].y0,
+                            nav_clip_regions[idx].x1,
+                            nav_clip_regions[idx].y1,
+                            0, 0, 0, 0,
+                            UIBorder_Inner, 1,
+                            0.5f, 0.5f, 1.0f, 0.5f);
+        }
     }
     
-    ui->was_topmost_open_id = WasTopmostOpen(ui);
-    
-    NavCandidate *nav_candidate = ui->nav_candidates;
     for(uint idx = 0; idx < ARRAY_COUNT(ui->nav_candidates); ++idx)
     {
-        nav_candidate->id = 0;
+        ui->nav_candidates[idx].id = 0;
+    }
+    
+    for(UIWindow *window_iter = ui->windows;
+        window_iter < ui->windows + ARRAY_COUNT(ui->windows);
+        ++window_iter)
+    {
+        window_iter->was_active = window_iter->active;
+        window_iter->active = false;
+        window_iter->nav_old_id = window_iter->nav_new_id;
+        window_iter->nav_new_id = 0;
+        window_iter->nav_old_rect = window_iter->nav_new_rect;
     }
     
     uint window_id = GetID(ui, "root_window");
@@ -713,58 +772,20 @@ void BeginFrame(UIState *ui)
     
 }
 
+
 void EndFrame(UIState *ui)
 {
-    ASSERT(ui->open_stack_size == 1);
-    
-    if(ui->was_open_stack_size > 0)
-    {
-        
-        UIWindow *window = GetWindow(ui, ui->was_topmost_open_id);
-        
-        F32 buffer_w = (F32)ui->offscreen_buffer->width;
-        F32 buffer_h = (F32)ui->offscreen_buffer->height;
-        
-        Rect *nav_clip_rects = window->nav_clip_rects;
-        Rect last_nav_rect = window->last_nav_rect;
-        for(uint idx = 0; idx < ARRAY_COUNT(window->nav_clip_rects); ++idx)
-        {
-            nav_clip_rects[idx].x0 = CLAMP(0, last_nav_rect.x0, buffer_w);
-            nav_clip_rects[idx].y0 = CLAMP(0, last_nav_rect.y0, buffer_h);
-            nav_clip_rects[idx].x1 = CLAMP(0, last_nav_rect.x1, buffer_w);
-            nav_clip_rects[idx].y1 = CLAMP(0, last_nav_rect.y1, buffer_h);
-        }
-        
-        nav_clip_rects[UINavDir_Up - 1].y0 = nav_clip_rects[UINavDir_Up - 1].y1;
-        nav_clip_rects[UINavDir_Up - 1].y1 = buffer_h - 1.0f;
-        
-        nav_clip_rects[UINavDir_Left - 1].x1 = nav_clip_rects[UINavDir_Left - 1].x0;
-        nav_clip_rects[UINavDir_Left - 1].x0 = 0;
-        
-        nav_clip_rects[UINavDir_Down - 1].y1 = nav_clip_rects[UINavDir_Down - 1].y0;
-        nav_clip_rects[UINavDir_Down - 1].y0 = 0.0f;
-        
-        nav_clip_rects[UINavDir_Right - 1].x0 = nav_clip_rects[UINavDir_Right - 1].x1;
-        nav_clip_rects[UINavDir_Right - 1].x1 = buffer_w;
-        
-        for(uint idx = 0; idx < ARRAY_COUNT(window->nav_clip_rects); ++idx)
-        {
-            DrawRectangleEx(ui->offscreen_buffer,
-                            nav_clip_rects[idx].x0,
-                            nav_clip_rects[idx].y0,
-                            nav_clip_rects[idx].x1,
-                            nav_clip_rects[idx].y1,
-                            0, 0, 0, 0,
-                            UIBorder_Inner, 1,
-                            0.5f, 0.5f, 1.0f, 0.5f);
-        }
-        
-    }
-    
     if(Pressed(ui->input, Input_ActionRight) && ui->open_stack_size > 1)
         PopOpen(ui);
     
+    ASSERT(ui->id_stack_size == 1);
     EndWindow(ui);
+    
+    ui->was_topmost_open = ui->topmost_open;
+    ui->topmost_open = (ui->open_stack_size > 0 ? ui->open_stack[ui->open_stack_size - 1] : 0);
+    MEMORY_COPY(ui->was_open_stack, ui->open_stack, sizeof(uint)*ui->open_stack_size);
+    ui->was_open_stack_size = ui->open_stack_size;
+    ui->open_stack_size = 0;
 }
 
 void GameUpdateAndRender(GameMemory *memory, Input *input, OffscreenBuffer *buffer, FontPack *font_pack)
@@ -782,16 +803,16 @@ void GameUpdateAndRender(GameMemory *memory, Input *input, OffscreenBuffer *buff
         
         InitializeInput(input);
         
-        ui->key_repeat_interval = 0.25f;
+        ui->key_repeat_interval = 0.125f;
         
         ASSERT(IsPowerOfTwo(ARRAY_COUNT(ui->windows)));
-        ui->colors[UIColor_FillDefault]   = V4F32(0.125f, 0.133f, 0.144f, 0.6f);
-        ui->colors[UIColor_FillFocused]   = V4F32(0.125f, 0.133f, 0.5f,   0.6f);
-        ui->colors[UIColor_FillActive]    = V4F32(0.125f, 0.500f, 0.144f, 0.6f);
-        ui->colors[UIColor_BorderDefault] = V4F32(0.203f, 0.211f, 0.222f, 0.6f);
-        ui->colors[UIColor_BorderFocused] = V4F32(0.203f, 0.211f, 0.6f,   0.6f);
-        ui->colors[UIColor_BorderActive]  = V4F32(0.203f, 0.6f,   0.222f, 0.6f);
-        ui->colors[UIColor_Text]          = V4F32(0.6f,   0.6f,   0.6f,   0.6f);
+        ui->colors[UIColor_FillDefault]   = V4F32(0.125f, 0.133f, 0.144f, 0.8f);
+        ui->colors[UIColor_FillFocused]   = V4F32(0.125f, 0.133f, 0.5f,   0.8f);
+        ui->colors[UIColor_FillActive]    = V4F32(0.125f, 0.500f, 0.144f, 0.8f);
+        ui->colors[UIColor_BorderDefault] = V4F32(0.203f, 0.211f, 0.222f, 0.8f);
+        ui->colors[UIColor_BorderFocused] = V4F32(0.203f, 0.211f, 0.6f,   0.8f);
+        ui->colors[UIColor_BorderActive]  = V4F32(0.203f, 0.6f,   0.222f, 0.8f);
+        ui->colors[UIColor_Text]          = V4F32(0.6f,   0.6f,   0.6f,   0.8f);
         
         ui->border_type = UIBorder_Inner;
         ui->border_width = 4;
@@ -813,17 +834,26 @@ void GameUpdateAndRender(GameMemory *memory, Input *input, OffscreenBuffer *buff
     
     BeginFrame(ui);
     
-    Button(ui, "a--", RectAbs(50, 140, 100, 40));
-    Button(ui, "b--", RectAbs(50, 95, 100, 40));
-    Button(ui, "c--", RectAbs(50, 50, 100, 40));
+    char *names[] = { "one", "two", "three", "four", "five", "six", "seven", "eight", "nine" };
     
-    Button(ui, "-a-", RectAbs(155, 145, 100, 40));
-    Button(ui, "-b-", RectAbs(155, 100, 100, 40));
-    Button(ui, "-c-", RectAbs(155, 55, 100, 40));
+    for(uint idx_top = 0; idx_top < ARRAY_COUNT(names); ++idx_top)
+    {
+        if(BeginMenu(ui, names[idx_top], RectAbs(20+(F32)(idx_top%3)*105, 20+(F32)(idx_top/3)*55, 100, 50)))
+        {
+            for(uint idx_mid = 0; idx_mid < ARRAY_COUNT(names); ++idx_mid)
+            {
+                if(BeginMenu(ui, names[idx_mid], RectAbs(30+(F32)(idx_mid%3)*105, 30+(F32)(idx_mid/3)*55, 100, 50)))
+                {
+                    for(uint idx_bot = 0; idx_bot < ARRAY_COUNT(names); ++idx_bot)
+                        Button(ui, names[idx_bot], RectAbs(40+(F32)(idx_bot%3)*105, 40+(F32)(idx_bot/3)*55, 100, 50));
+                }
+                EndMenu(ui);
+            }
+        }
+        EndMenu(ui);
+    }
     
-    Button(ui, "--a", RectAbs(260, 150, 100, 40));
-    Button(ui, "--b", RectAbs(260, 105, 100, 40));
-    Button(ui, "--c", RectAbs(260, 60, 100, 40));
+    
     
     EndFrame(ui);
     

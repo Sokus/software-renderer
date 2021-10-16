@@ -37,20 +37,19 @@ typedef struct UIWindow
     uint id;
     bool active;
     bool was_active;
-    uint new_nav_id;
-    uint last_nav_id;
-    Rect new_nav_rect;
-    Rect last_nav_rect;
-    Rect nav_clip_rects[4];
+    uint nav_new_id;
+    uint nav_old_id;
+    Rect nav_new_rect;
+    Rect nav_old_rect;
     struct UIWindow* parent;
 } UIWindow;
 
-typedef struct NavCandidate
+typedef struct UINavCandidate
 {
     uint id;
     Rect rect;
     F32 distance;
-} NavCandidate;
+} UINavCandidate;
 
 typedef struct UIState
 {
@@ -60,13 +59,15 @@ typedef struct UIState
     UIWindow windows[32];
     UIWindow *current_window;
     uint open_stack[32];
-    size_t open_stack_size;
     uint was_open_stack[32];
+    size_t open_stack_size;
     size_t was_open_stack_size;
-    uint was_topmost_open_id;
+    uint topmost_open;
+    uint was_topmost_open;
     
     // Navigation
-    NavCandidate nav_candidates[4];
+    UINavCandidate nav_candidates[4];
+    Rect nav_clip_regions[4];
     F32 key_repeat_interval;
     
     // Render info

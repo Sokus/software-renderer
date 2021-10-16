@@ -55,7 +55,7 @@ typedef struct Input
     F32 stick_x, stick_y;
     I32 mouse_x, mouse_y, mouse_z;
     
-    uint frame_index;
+    uint frame_idx;
     F32 time_dt;
 } Input;
 
