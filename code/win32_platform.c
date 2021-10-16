@@ -903,6 +903,7 @@ WinMain(HINSTANCE instance,
                                                dimension.width, dimension.height);
                     ReleaseDC(window, device_context);
                     
+                    ++input.frame_idx;
                     flip_wall_clock = Win32GetWallClock();
                 }
             }
