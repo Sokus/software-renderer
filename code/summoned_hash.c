@@ -54,6 +54,8 @@ uint HashStr(char* data_p, size_t data_size, uint seed)
 
 uint HashPtr(void* ptr, uint seed)
 {
-    uint result = HashData(ptr, sizeof(ptr), seed);
-    return result;
+    U32 crc = (U32)~seed;
+    U32* crc32_lut = global_crc32_lookup_table;
+    crc = (crc >> 8) ^ crc32_lut[(crc & 0xFF) ^ *((U8 *)ptr)];
+    return (uint)(~crc);
 }
