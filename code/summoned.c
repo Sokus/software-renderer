@@ -836,8 +836,6 @@ void GameUpdateAndRender(GameMemory *memory, Input *input, OffscreenBuffer *buff
         EndMenu(ui);
     }
     
-    
-    
     EndFrame(ui);
     
     for(int idx = 0; idx < Input_COUNT; ++idx)
@@ -848,7 +846,8 @@ void GameUpdateAndRender(GameMemory *memory, Input *input, OffscreenBuffer *buff
         F32 r = !was_down && is_down;
         F32 g = is_down;
         F32 b = was_down;
-        DrawRectangle(buffer, (F32)idx*20, 0, (F32)(idx+1)*20, 20, r, g, b, 1);
+        F32 a = CLAMP(0.0f, r+g+b, 1.0f);
+        DrawRectangle(buffer, (F32)idx*20, 0, (F32)(idx+1)*20, 20, r, g, b, a);
     }
     
     ++game_state->frame_idx;
