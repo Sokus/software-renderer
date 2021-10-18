@@ -771,9 +771,71 @@ void EndFrame(UIState *ui)
     ui->open_stack_size = 0;
 }
 
-void GameUpdateAndRender(GameMemory *memory, Input *input, OffscreenBuffer *buffer, FontPack *font_pack)
+Vertex *PushVertices(RenderData *data, uint vertex_count)
 {
-    UNUSED(font_pack);
+    ASSERT(data->vertices_used + vertex_count <= ARRAY_COUNT(data->vertices));
+    Vertex *result = data->vertices + data->vertices_used;
+    data->vertices_used += vertex_count;
+    return result;
+}
+
+uint *PushIndices(RenderData *data, uint index_count)
+{
+    ASSERT(data->indices_used + index_count <= ARRAY_COUNT(data->indices));
+    uint *result = data->indices + data->indices_used;
+    data->indices_used += index_count;
+    return result;
+}
+
+RenderTask *PushTask(RenderData *data)
+{
+    ASSERT(data->tasks_used < ARRAY_COUNT(data->tasks));
+    RenderTask *result = data->tasks + data->tasks_used;
+    ++data->tasks_used;
+    return result;
+}
+
+void PrimRect(RenderData *data, RenderTaskList *task_list,
+              F32 x0, F32 y0, F32 x1, F32 y1,
+              F32 r, F32 g, F32 b, F32 a)
+{
+    if(x1 <= x0 || y1 <= y0)
+        return;
+    
+    uint rect_vertex_count = 4;
+    uint rect_index_count = 6;
+    
+    RenderTask *task = PushTask(data);
+    Vertex *vtxs = PushVertices(data, rect_vertex_count);
+    uint *idxs = PushIndices(data, rect_index_count);
+    
+    task->prim_type = PrimType_Triangle;
+    task->texture_id = 0;
+    task->index_data = idxs;
+    task->index_count = rect_index_count;
+    
+    vtxs[0].pos.x = x0, vtxs[0].pos.y = y0;
+    vtxs[1].pos.x = x1, vtxs[1].pos.y = y0;
+    vtxs[2].pos.x = x1, vtxs[2].pos.y = y1;
+    vtxs[3].pos.x = x0, vtxs[3].pos.y = y1;
+    
+    for(uint v_i = 0; v_i < rect_vertex_count; ++v_i)
+    {
+        vtxs[v_i].col.r = r;
+        vtxs[v_i].col.g = g;
+        vtxs[v_i].col.b = b;
+        vtxs[v_i].col.a = a;
+    }
+    
+    idxs[0] = 0, idxs[1] = 1, idxs[2] = 3;
+    idxs[3] = 1, idxs[4] = 2, idxs[5] = 3;
+    
+    SLL_QUEUE_PUSH_BACK(task_list->first, task_list->last, task);
+}
+
+void GameUpdateAndRender(GameMemory *memory, Input *input, OffscreenBuffer *buffer, Font *font)
+{
+    UNUSED(font);
     
     GameState *game_state = (GameState *)memory->permanent_storage;
     UIState *ui = &game_state->ui;
@@ -815,28 +877,9 @@ void GameUpdateAndRender(GameMemory *memory, Input *input, OffscreenBuffer *buff
     
     DrawRectangle(buffer, 0, 0, (F32)buffer->width, (F32)buffer->height, 0, 0, 0, 1);
     
-    BeginFrame(ui);
-    
-    char *names[] = { "one", "two", "three", "four", "five", "six", "seven", "eight", "nine" };
-    
-    for(uint idx_top = 0; idx_top < ARRAY_COUNT(names); ++idx_top)
-    {
-        if(BeginMenu(ui, names[idx_top], RectAbs(20+(F32)(idx_top%3)*105, 20+(F32)(idx_top/3)*55, 100, 50)))
-        {
-            for(uint idx_mid = 0; idx_mid < ARRAY_COUNT(names); ++idx_mid)
-            {
-                if(BeginMenu(ui, names[idx_mid], RectAbs(30+(F32)(idx_mid%3)*105, 30+(F32)(idx_mid/3)*55, 100, 50)))
-                {
-                    for(uint idx_bot = 0; idx_bot < ARRAY_COUNT(names); ++idx_bot)
-                        Button(ui, names[idx_bot], RectAbs(40+(F32)(idx_bot%3)*105, 40+(F32)(idx_bot/3)*55, 100, 50));
-                }
-                EndMenu(ui);
-            }
-        }
-        EndMenu(ui);
-    }
-    
-    EndFrame(ui);
+    RenderData data = {0};
+    RenderTaskList list = {0};
+    PrimRect(&data, &list, 20, 20, 150, 60, 1, 0.6f, 0.5f, 0.7f);
     
     for(int idx = 0; idx < Input_COUNT; ++idx)
     {

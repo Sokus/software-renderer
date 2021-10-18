@@ -726,21 +726,20 @@ WinMain(HINSTANCE instance,
             game_memory.transient_storage = ((U8 *)game_memory.permanent_storage +
                                              game_memory.permanent_storage_size);
             
-            FontPack font_pack = { .name = "Liberation Mono", .filename="liberation-mono.ttf", .size = 16 };
+            Font font;
+            char *font_name = "Liberation Mono";
+            char *font_filename = "liberation-mono.ttf";
+            int font_size = 16;
+            
             char font_path[MAX_PATH];
-            Win32BuildEXEPathFilename(&win32_state, font_pack.filename,
+            Win32BuildEXEPathFilename(&win32_state, font_filename,
                                       sizeof(font_path), font_path);
             
             if(!Win32RegisterFontFile(font_path))
-            {
                 INVALID_CODE_PATH;
-            }
             
-            if(!Win32MakeAsciiFont(font_pack.name, font_pack.size, &font_pack.regular,
-                                   FontRasterFlag_RasterFont))
-            {
+            if(!Win32MakeAsciiFont(font_name, font_size, &font, FontRasterFlag_RasterFont))
                 INVALID_CODE_PATH;
-            }
             
             if(game_memory.permanent_storage && game_memory.transient_storage)
             {
@@ -850,7 +849,7 @@ WinMain(HINSTANCE instance,
                     
                     if(game.update_and_render)
                     {
-                        game.update_and_render(&game_memory, &input, &buffer, &font_pack);
+                        game.update_and_render(&game_memory, &input, &buffer, &font);
                     }
                     
                     LARGE_INTEGER work_counter = Win32GetWallClock();

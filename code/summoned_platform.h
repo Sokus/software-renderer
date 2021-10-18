@@ -78,19 +78,9 @@ typedef struct Font
     U32 *data;
 } Font;
 
-typedef struct FontPack
-{
-    char *name;
-    char *filename;
-    int size;
-    
-    Font regular;
-    // Font bold;
-} FontPack;
-
 typedef void GameUpdateAndRenderType(GameMemory *memory,
                                      Input *input,
                                      OffscreenBuffer *buffer,
-                                     FontPack *font_pack);
+                                     Font *font);
 
 #endif //SUMMONED_PLATFORM_H

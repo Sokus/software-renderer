@@ -23,15 +23,6 @@ typedef enum UIColor
     UIColor_COUNT
 } UIColor;
 
-typedef enum UINavDir
-{
-    UINavDir_None,
-    UINavDir_Up,
-    UINavDir_Left,
-    UINavDir_Down,
-    UINavDir_Right
-} UINavDir;
-
 typedef struct UIWindow
 {
     uint id;
@@ -81,6 +72,44 @@ typedef struct UIState
     Input *input;
     
 } UIState;
+
+typedef enum PrimType
+{
+    PrimType_None,
+    PrimType_Triangle
+} PrimType;
+
+typedef struct RenderTask
+{
+    PrimType prim_type;
+    uint texture_id;
+    uint *index_data;
+    uint index_count;
+    struct RenderTask *next;
+} RenderTask;
+
+typedef struct RenderTaskList
+{
+    RenderTask *first;
+    RenderTask *last;
+} RenderTaskList;
+
+typedef struct Vertex
+{
+    V2 pos;
+    V4 col;
+    V2 tex;
+} Vertex;
+
+typedef struct RenderData
+{
+    RenderTask tasks[512];
+    uint tasks_used;
+    Vertex vertices[4096];
+    uint vertices_used;
+    uint indices[1024];
+    uint indices_used;
+} RenderData;
 
 typedef struct GameState
 {
