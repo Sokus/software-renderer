@@ -11,6 +11,12 @@ F32 RoundF32(F32 value)
     return result;
 }
 
+F32 FloorF32(F32 value)
+{
+    F32 result = floorf(value);
+    return result;
+}
+
 F32 Sin(F32 angle)
 {
     F32 result = sinf(angle);
@@ -20,6 +26,12 @@ F32 Sin(F32 angle)
 F32 Cos(F32 angle)
 {
     F32 result = cosf(angle);
+    return result;
+}
+
+F32 Tan(F32 angle)
+{
+    F32 result = tanf(angle);
     return result;
 }
 

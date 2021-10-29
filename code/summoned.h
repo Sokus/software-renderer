@@ -96,7 +96,7 @@ typedef struct RenderTaskList
 
 typedef struct Vertex
 {
-    V2 pos;
+    V4 pos;
     V4 col;
     V2 tex;
 } Vertex;

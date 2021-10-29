@@ -8,6 +8,24 @@
 #include "summoned_hash.c"
 
 void
+DrawPixel(OffscreenBuffer *buffer, int x, int y, F32 r, F32 g, F32 b, F32 a)
+{
+    if(x >= 0 && x < buffer->width && y >= 0 && y < buffer->height
+       && a > 0.0f)
+    {
+        U8 *dest = (U8 *)(buffer->memory
+                          + buffer->pitch*(buffer->height-1) - y*buffer->pitch
+                          + x*buffer->bytes_per_pixel);
+        *dest = (U8)((a*b*255.0f) + ((F32)(*dest)*(1.0f-a)));
+        ++dest;
+        *dest = (U8)((a*g*255.0f) + ((F32)(*dest)*(1.0f-a)));
+        ++dest;
+        *dest = (U8)((a*r*255.0f) + ((F32)(*dest)*(1.0f-a)));
+        ++dest;
+    }
+}
+
+void
 DrawRectangle(OffscreenBuffer *buffer,
               F32 real_min_x, F32 real_min_y, F32 real_max_x, F32 real_max_y,
               F32 r, F32 g, F32 b, F32 a)
@@ -833,6 +851,227 @@ void PrimRect(RenderData *data, RenderTaskList *task_list,
     SLL_QUEUE_PUSH_BACK(task_list->first, task_list->last, task);
 }
 
+#if 0
+void DrawHorizontalLine(OffscreenBuffer *buffer, int x1, V4 color1, int x2, V4 color2, int y) {
+    if (x1 > x2) { SWAP(x1, x2, int); SWAP(color1, color2, V4); }
+    V4 dc = ScaleV4(1.0f/(F32)(x2-x1), SubtractV4(color2, color1));
+    V4 c = color1;
+    for (int x = x1; x <= x2; x++)
+    {
+        DrawPixel(buffer, x, y, c.r, c.g, c.b, c.a);
+        c.r += dc.r; c.g += dc.g; c.b += dc.b; c.a += dc.a;
+    }
+}
+void SortTriangleWithAttributes(int *x1, int *y1,
+                                int *x2, int *y2,
+                                int *x3, int *y3,
+                                V4 *c1, V4 *c2, V4 *c3)
+{
+    if (*y2 > *y3) { SWAP(*x2, *x3, int); SWAP(*y2, *y3, int); SWAP(*c2, *c3, V4); }
+    if (*y1 > *y2) { SWAP(*x1, *x2, int); SWAP(*y1, *y2, int); SWAP(*c1, *c2, V4); }
+    if (*y2 > *y3) { SWAP(*x2, *x3, int); SWAP(*y2, *y3, int); SWAP(*c2, *c3, V4); }
+    if (*y1 == *y2 && *x1 > *x2) { SWAP(*x1, *x2, int); SWAP(*y1, *y2, int); SWAP(*c1, *c2, V4); }
+}
+
+/**
+* --Task--
+* Finish this function.
+* It should increase y and move on both non-horizontal lines of the triangle, changing the color and x.
+*/
+void FillFlatBottomTriangle(int x1, int y1,
+                            int x2, int y2,
+                            int x3, int y3,
+                            V4 c1, V4 c2, V4 c3) {
+    // 1) Find how much x should change, when y changes by 1 for both lines (e.g. deltaX1, deltaX2)
+    //        float deltaXA = float(x1 - x3) / (y1 - y3);
+    // 2) Find how much the color should change, when y changes by 1 for both lines.
+    // 3) Make some variables to hold the current x and color values
+    // 4) Create a loop, where we change the y by 1 and then add the change of x and color to the corresponding variables.
+    // 4.1) Inside the loop call the horizontal gradient line drawing function (DrawHorizontalLine).
+}
+
+/**
+* --Task--
+* Finish this function also.
+*/
+void FillFlatTopTriangle(int x1, int y1,
+                         int x2, int y2,
+                         int x3, int y3,
+                         V4 c1, V4 c2, V4 c3) {
+    // Same as flat bottom triangle, but start from bottom vertex.
+}
+
+void DrawColoredTriangle(int x1, int y1,
+                         int x2, int y2,
+                         int x3, int y3, 
+                         V4 c1, V4 c2, V4 c3)
+{
+    SortTriangleWithAttributes(&x1, &y1, &x2, &y2, &x3, &y3, &c1, &c2, &c3);
+    
+    if(y2 == y3)
+    {
+        FillFlatBottomTriangle(x1, y1, x2, y2, x3, y3, c1, c2, c3);
+    }
+    else if (y1 == y2)
+    {
+        FillFlatTopTriangle(x1, y1, x2, y2, x3, y3, c1, c2, c3);
+    }
+    else
+    {
+        FillFlatTopTriangle(x1, y1, x2, y2, x3, y3, c1, c2, c3);
+        FillFlatBottomTriangle(x1, y1, x2, y2, x3, y3, c1, c2, c3);
+    }
+}
+#endif
+
+void PushCube(RenderData *data, RenderTaskList *task_list)
+{
+    uint cube_vertex_count = 8;
+    uint cube_index_count = 36;
+    
+    RenderTask *task = PushTask(data);
+    Vertex *vtxs = PushVertices(data, cube_vertex_count);
+    uint *idxs = PushIndices(data, cube_index_count);
+    
+    task->prim_type = PrimType_Triangle;
+    task->texture_id = 0;
+    task->index_data = idxs;
+    task->index_count = cube_index_count;
+    
+    //   7---6
+    //  /|  /|
+    // 3---2 |
+    // | 4-|-5
+    // |/  |/ 
+    // 0---1
+    
+    vtxs[0].pos.x = -0.5f, vtxs[0].pos.y = -0.5f, vtxs[0].pos.z = -0.5f;
+    vtxs[1].pos.x =  0.5f, vtxs[1].pos.y = -0.5f, vtxs[1].pos.z = -0.5f; 
+    vtxs[2].pos.x =  0.5f, vtxs[2].pos.y =  0.5f, vtxs[2].pos.z = -0.5f;
+    vtxs[3].pos.x = -0.5f, vtxs[3].pos.y =  0.5f, vtxs[3].pos.z = -0.5f;
+    vtxs[4].pos.x = -0.5f, vtxs[4].pos.y = -0.5f, vtxs[4].pos.z =  0.5f;
+    vtxs[5].pos.x =  0.5f, vtxs[5].pos.y = -0.5f, vtxs[5].pos.z =  0.5f;
+    vtxs[6].pos.x =  0.5f, vtxs[6].pos.y =  0.5f, vtxs[6].pos.z =  0.5f;
+    vtxs[7].pos.x = -0.5f, vtxs[7].pos.y =  0.5f, vtxs[7].pos.z =  0.5f;
+    
+    for(uint i = 0; i < 8; ++i)
+    {
+        vtxs[i].pos.z += 5.0f;
+    }
+    
+    // bottom:
+    idxs[0] = 4, idxs[1] = 5, idxs[2] = 1, idxs += 3;
+    idxs[0] = 4, idxs[1] = 1, idxs[2] = 0, idxs += 3;
+    // front:
+    idxs[0] = 0, idxs[1] = 1, idxs[2] = 2, idxs += 3;
+    idxs[0] = 0, idxs[1] = 2, idxs[2] = 3, idxs += 3;
+    // right:
+    idxs[0] = 1, idxs[1] = 5, idxs[2] = 6, idxs += 3;
+    idxs[0] = 1, idxs[1] = 6, idxs[2] = 2, idxs += 3;
+    // left:
+    idxs[0] = 4, idxs[1] = 0, idxs[2] = 3, idxs += 3;
+    idxs[0] = 4, idxs[1] = 3, idxs[2] = 7, idxs += 3;
+    // back:
+    idxs[0] = 5, idxs[1] = 4, idxs[2] = 7, idxs += 3;
+    idxs[0] = 5, idxs[1] = 7 ,idxs[2] = 6, idxs += 3;
+    // up:
+    idxs[0] = 3, idxs[1] = 2, idxs[2] = 6, idxs += 3;
+    idxs[0] = 3, idxs[1] = 6, idxs[2] = 7, idxs += 3;
+    
+    SLL_QUEUE_PUSH_BACK(task_list->first, task_list->last, task);
+}
+
+V4 Project(F32 x, F32 y, F32 z)
+{
+    V4 camera_pos = {0};
+    V4 camera_rot = {0};
+    F32 FOV = 65;
+    int width = 960;
+    int height = 540;
+    
+    F32 tx = x - camera_pos.x;
+    F32 ty = z - camera_pos.z;
+    F32 tz = y - camera_pos.y;
+    
+    F32 cx = Cos(camera_rot.pitch);
+    F32 cy = Cos(camera_rot.yaw);
+    F32 cz = Cos(camera_rot.roll);
+    
+    F32 sx = Sin(camera_rot.pitch);
+    F32 sy = Sin(camera_rot.yaw);
+    F32 sz = Sin(camera_rot.roll);
+    
+    F32 dx = cy * (sz * ty + cz * tx) - sy * tz;
+    F32 dy = sx * (cy * tz + sy * (sz * ty + cz * tx)) + cx * (cz * ty - sz * tx);
+    F32 dz = cx * (cy * tz + sy * (sz * ty + cz * tx)) - sx * (cz * ty - sz * tx);
+    
+    F32 ez = 1.0f / Tan(FOV / 2.0f);
+    
+    F32 bx = ez / dz * dx;
+    F32 by = ez / dz * dy;
+    
+    if(dz < 0.0)
+    {
+        bx = -bx;
+        by = -by;
+    }
+    
+    V4 result;
+    result.x = ((F32)width + bx * (F32)height) / 2.0f;
+    result.y = ((F32)height + by * (F32)height) / 2.0f;
+    result.z = dz;
+    result.w = 0.0f;
+    
+    return result;
+}
+
+void Bresenham(OffscreenBuffer *buffer, int x0, int y0, int x1, int y1)
+{
+    int dx = ABS(x1-x0), sx = x0<x1 ? 1 : -1;
+    int dy = ABS(y1-y0), sy = y0<y1 ? 1 : -1; 
+    int err = (dx>dy ? dx : -dy)/2, e2;
+    
+    for(;;)
+    {
+        DrawPixel(buffer, x0, y0, 1, 1, 1, 1);
+        if (x0==x1 && y0==y1) break;
+        e2 = err;
+        if (e2 > -dx) { err -= dy; x0 += sx; }
+        if (e2 < dy) { err += dx; y0 += sy; }
+    }
+}
+
+void Render(OffscreenBuffer *buffer, RenderData *data, RenderTaskList *task_list)
+{
+    for(RenderTask *task = task_list->first; task != 0; task = task->next)
+    {
+        switch(task->prim_type)
+        {
+            case PrimType_Triangle:
+            {
+                ASSERT(task->index_count > 0 && task->index_count % 3 == 0);
+                for(uint idx_i = 0; idx_i < task->index_count; idx_i += 3)
+                {
+                    Vertex *v0 = data->vertices + data->indices[idx_i];
+                    Vertex *v1 = data->vertices + data->indices[idx_i + 1];
+                    Vertex *v2 = data->vertices + data->indices[idx_i + 2];
+                    V4 p0 = Project(v0->pos.x, v0->pos.y, v0->pos.z);
+                    V4 p1 = Project(v1->pos.x, v1->pos.y, v1->pos.z);
+                    V4 p2 = Project(v2->pos.x, v2->pos.y, v2->pos.z);
+                    Bresenham(buffer, (int)p0.x, (int)-p0.y, (int)p1.x, (int)-p1.y);
+                    Bresenham(buffer, (int)p1.x, (int)-p1.y, (int)p2.x, (int)-p2.y);
+                    Bresenham(buffer, (int)p2.x, (int)-p2.y, (int)p0.x, (int)-p0.y);
+                }
+            } break;
+            
+            default:
+            {
+                INVALID_CODE_PATH;
+            }
+        }
+    }
+}
+
 void GameUpdateAndRender(GameMemory *memory, Input *input, OffscreenBuffer *buffer, Font *font)
 {
     UNUSED(font);
@@ -877,10 +1116,12 @@ void GameUpdateAndRender(GameMemory *memory, Input *input, OffscreenBuffer *buff
     
     DrawRectangle(buffer, 0, 0, (F32)buffer->width, (F32)buffer->height, 0, 0, 0, 1);
     
-    RenderData data = {0};
-    RenderTaskList list = {0};
-    PrimRect(&data, &list, 20, 20, 150, 60, 1, 0.6f, 0.5f, 0.7f);
+    RenderData render_data = {0};
+    RenderTaskList render_tasks = {0};
+    PushCube(&render_data, &render_tasks);
+    Render(buffer, &render_data, &render_tasks);
     
+#if 0
     for(int idx = 0; idx < Input_COUNT; ++idx)
     {
         bool is_down = IsDown(input, idx);
@@ -892,6 +1133,6 @@ void GameUpdateAndRender(GameMemory *memory, Input *input, OffscreenBuffer *buff
         F32 a = CLAMP(0.0f, r+g+b, 1.0f);
         DrawRectangle(buffer, (F32)idx*20, 0, (F32)(idx+1)*20, 20, r, g, b, a);
     }
-    
+#endif 
     ++game_state->frame_idx;
 }
